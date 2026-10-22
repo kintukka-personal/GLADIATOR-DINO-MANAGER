@@ -291,12 +291,16 @@ export function StoreProvider({ init, children }: { init: StoreInit; children: R
     bump();
   }, [bump]);
 
-  // theme + reduced motion on <html>
+  // theme + reduced motion on <html>. "System" leaves the host page's own data-theme alone (the claude.ai viewer
+  // sets one when its viewer picks a theme) and only undoes an override this page made.
   const settings = metaRef.current.settings;
+  const hostTheme = useRef<string | null | undefined>(undefined);
   useEffect(() => {
     const el = document.documentElement;
-    if (settings.theme === 'system') el.removeAttribute('data-theme');
-    else el.setAttribute('data-theme', settings.theme);
+    if (hostTheme.current === undefined) hostTheme.current = el.getAttribute('data-theme');
+    if (settings.theme !== 'system') el.setAttribute('data-theme', settings.theme);
+    else if (hostTheme.current) el.setAttribute('data-theme', hostTheme.current);
+    else el.removeAttribute('data-theme');
     el.classList.toggle('reduce-motion', !!settings.reduceMotion);
   }, [settings.theme, settings.reduceMotion]);
 

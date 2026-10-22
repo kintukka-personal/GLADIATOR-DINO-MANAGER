@@ -56,7 +56,12 @@ The breeding system follows ARK: Survival Evolved's rules from mating to adultho
 [`game/DESIGN.md`](game/DESIGN.md) is the full specification: the terminology map, species, breeding numbers,
 combat, gear, estate and screens.
 
-### Run it
+### Play it
+
+A hosted build is at https://claude.ai/artifact/4FPD6XeSctDG84pM6gQrmm. It's private to its owner until shared.
+Saves stay in your browser.
+
+### Run it locally
 
 ```bash
 cd game
