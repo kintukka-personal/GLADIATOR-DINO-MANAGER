@@ -25,7 +25,7 @@ import { DinoArt, DinoThumb } from '../art/DinoArt';
 import { EggArt } from '../art/EggArt';
 import { safe } from '../safe';
 import { spiesOf, keepersOf, totals } from '../derive';
-import { STAT_SHORT, fmt, pct } from '../format';
+import { STAT_SHORT, pct } from '../format';
 import { houseById } from '../../engine/util';
 
 export function MarketScreen() {
@@ -187,7 +187,7 @@ function Goods() {
               </div>
               <div className="col gap-1" style={{ alignItems: 'flex-end' }}>
                 <Money value={p} />
-                <Btn size="sm" variant={mode === 'buy' ? 'primary' : 'default'} disabled={mode === 'buy' && !locked && me.denarii < p} onClick={() => act(x)}>{locked ? 'Unlock' : mode === 'buy' ? 'Buy' : 'Sell'}</Btn>
+                <Btn id={`${mode}-g-${x.id}`} size="sm" variant={mode === 'buy' ? 'primary' : 'default'} disabled={mode === 'buy' && !locked && me.denarii < p} onClick={() => act(x)}>{locked ? 'Unlock' : mode === 'buy' ? 'Buy' : 'Sell'}</Btn>
               </div>
             </div>
           );

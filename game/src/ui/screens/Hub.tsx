@@ -2,10 +2,11 @@
 // what needs attention, quick links; story conversation, decision, defense and adventure sheets.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { BattleResult, Decision, GameState, PendingDefense, StoryConversation } from '../../engine/types';
+import { ascensionProgress } from '../../engine/ascension';
+import { safe } from '../safe';
 import { seasonName } from '../../engine/breeding';
 import { activeConversation, answerConversation } from '../../engine/stories';
 import { resolveDecision } from '../../engine/events';
-import { resolveDefense, DEFENSE_PROMPTS } from '../../engine/intrigue';
 import { resolveAdventure, type AdventureResolution } from '../../engine/adventures';
 import { useStore } from '../store';
 import { Icon, type IconName } from '../components/Icon';
@@ -18,6 +19,7 @@ import { fmt, plural } from '../format';
 import { keepersOf } from '../derive';
 import { devSampleResults } from '../devFixture';
 import { houseById } from '../../engine/util';
+import { DefenseSheet, ACTION_TEXT } from './Intrigue';
 
 // ---------------------------------------------------------------------------------------------
 // Advance
@@ -101,7 +103,7 @@ export function AdvanceButton({ compact }: { compact?: boolean }) {
         }
       >
         <p className="small">{blocked}</p>
-        <p className="small muted">Week resolution runs every system of the ludus. Some of them are still being built, so nothing was changed and your game is safe.</p>
+        <p className="small muted">Something went wrong while the week was resolving. Nothing was changed and your game is safe; export your save from the menu if it keeps happening.</p>
       </Sheet>
     </>
   );
@@ -247,47 +249,6 @@ export function DecisionSheet({ d, onClose }: { d: Decision; onClose: () => void
   );
 }
 
-const ACTION_TEXT: Record<string, string> = {
-  assassinate: 'An assassin is loose in your ludus', poison: 'Someone is tampering with the feed', persuade: 'A rival is whispering to your dinos',
-  steal: 'A thief is after your armory', sabotage: 'Saboteurs are near the pens', raid: 'Armed men gather at your palisade',
-};
-
-function DefenseSheet({ d, onClose }: { d: PendingDefense; onClose: () => void }) {
-  const store = useStore();
-  const g = store.game!;
-  const [text, setText] = useState<string | null>(null);
-  const prompt = DEFENSE_PROMPTS[d.prompt];
-  const rival = houseById(g, d.rivalId);
-  const target = d.targetCreatureId ? g.player.ludus.creatures.find((c) => c.id === d.targetCreatureId) : undefined;
-  const answer = (choice: 'assertive' | 'passive') => {
-    const r = store.act((s) => resolveDefense(s, d.id, choice), { stringIsText: true });
-    if (typeof r === 'string') setText(r);
-  };
-  return (
-    <Sheet open onClose={onClose} title={ACTION_TEXT[d.action] ?? 'A scheme against you'} label={rival ? `House ${rival.name}` : 'A rival house'}
-      footer={text ? <div className="row end"><Btn variant="primary" onClick={onClose}>Continue</Btn></div> : undefined}>
-      <p className="story-intro">
-        {text ?? prompt?.text ?? `Your wardens report movement in the night${target ? ` near ${target.name}` : ''}. How do you respond?`}
-      </p>
-      {!text && (
-        <>
-          <p className="small muted">Estimated chance the scheme succeeds: <b className="num">{Math.round(d.chance * 100)}%</b></p>
-          <div className="choices mt-2">
-            <button type="button" id="defense-assertive" className="choice-btn" onClick={() => answer('assertive')}>
-              <span>{prompt?.assertive ?? 'Confront them'}</span>
-              <span className="cb-desc">Risky, but may catch the agent.</span>
-            </button>
-            <button type="button" id="defense-passive" className="choice-btn" onClick={() => answer('passive')}>
-              <span>{prompt?.passive ?? 'Double the guard and wait'}</span>
-              <span className="cb-desc">Safer; the scheme may still succeed.</span>
-            </button>
-          </div>
-        </>
-      )}
-    </Sheet>
-  );
-}
-
 function AdventureSheet({ a, onClose }: { a: AdventureResolution; onClose: () => void }) {
   const store = useStore();
   const [res, setRes] = useState<{ text: string; battle?: BattleResult; success: boolean } | null>(null);
@@ -342,9 +303,14 @@ export function HubScreen() {
   if (a.decisions) rows.push({ id: 'attn-decision', icon: 'bell', tone: 'amber', title: g.player.decisions[0].title, sub: a.decisions > 1 ? `${a.decisions} decisions waiting` : 'A decision awaits you', onClick: () => setDec(g.player.decisions[0]) });
   if (a.defenses) {
     const d = g.player.defenses[0];
-    rows.push({ id: 'attn-defense', icon: 'spy', tone: 'bad', title: `${houseById(g, d.rivalId)?.name ?? 'A rival'} is scheming`, sub: ACTION_TEXT[d.action], onClick: () => setDef(d) });
+    const known = (me.spiesLastWeek ?? 0) + ((me.buildings.guardTower ?? 0) > 0 ? 1 : 0) >= 1;
+    rows.push({ id: 'attn-defense', icon: 'spy', tone: 'bad', title: known ? `House ${houseById(g, d.rivalId)?.name ?? 'of a rival'} is scheming` : 'Someone is scheming against you', sub: ACTION_TEXT[d.action], onClick: () => setDef(d) });
   }
   for (const ad of a.adventures) rows.push({ id: `attn-adv-${ad.adventure.id}`, icon: 'flag', tone: 'info', title: `${ad.adventure.title} has returned`, sub: 'Hear what happened', onClick: () => setAdv(ad) });
+  const tactics = g.player.expedition && (g.player.storyData.expeditionTactics as string[] | undefined)?.length;
+  if (tactics) rows.push({ id: 'attn-expedition', icon: 'horde', tone: 'amber', title: 'The Horde\'s camp is found', sub: 'Choose how your militia attacks', onClick: () => store.nav.area('horde') });
+  const ascWeek = g.world.tournaments.some((t) => t.type === 'ascension');
+  if (ascWeek) rows.push({ id: 'attn-ascension', icon: 'temple', tone: 'amber', title: 'The Ascension is this week', sub: 'Register your champion in the Arena', onClick: () => store.nav.area('arena') });
   if (a.care) rows.push({ id: 'attn-care', icon: 'baby', tone: 'amber', title: `${plural(a.care, 'hatchling')} ${a.care === 1 ? 'wants' : 'want'} care`, sub: 'Cuddle, walk or feed them before the week ends', onClick: () => store.nav.area('breeding', 'nursery') });
   if (a.eggsAtRisk) rows.push({ id: 'attn-eggs', icon: 'thermo', tone: 'info', title: `${plural(a.eggsAtRisk, 'egg')} at risk`, sub: `Ambient ${g.world.temperature}°C is outside the ideal range`, onClick: () => store.nav.area('breeding', 'hatchery') });
   if (a.offers) {
@@ -357,21 +323,25 @@ export function HubScreen() {
   if (a.unread) rows.push({ id: 'attn-messages', icon: 'message', tone: 'info', title: `${plural(a.unread, 'unread message')}`, sub: g.player.messages.find((m) => !m.read)?.title, onClick: () => store.nav.area('messages') });
   if (a.objectives) rows.push({ id: 'attn-objectives', icon: 'flag', tone: 'good', title: `${plural(a.objectives, 'objective')} to claim`, onClick: () => store.nav.area('objectives') });
 
-  const quick: { name: 'objectives' | 'messages' | 'events' | 'finance' | 'influence' | 'estate' | 'horde'; label: string; icon: IconName; badge: number }[] = [
+  const asc = safe(() => ascensionProgress(g), null);
+  const ascBadge = asc && asc.trophies >= asc.needed && asc.hordeDefeated && asc.shrine ? 1 : 0;
+  const quick: { name: 'objectives' | 'messages' | 'events' | 'finance' | 'influence' | 'estate' | 'horde' | 'ascension'; label: string; icon: IconName; badge: number }[] = [
     { name: 'objectives', label: 'Objectives', icon: 'flag', badge: a.objectives },
     { name: 'messages', label: 'Messages', icon: 'message', badge: a.unread },
     { name: 'events', label: 'Events', icon: 'bell', badge: a.decisions },
     { name: 'finance', label: 'Finance', icon: 'finance', badge: 0 },
     { name: 'influence', label: 'Influence', icon: 'laurel', badge: 0 },
     { name: 'estate', label: 'Estate', icon: 'estate', badge: 0 },
-    { name: 'horde', label: 'Horde', icon: 'horde', badge: 0 },
+    { name: 'horde', label: 'Horde', icon: 'horde', badge: tactics ? 1 : 0 },
+    { name: 'ascension', label: 'Ascension', icon: 'temple', badge: ascBadge },
   ];
 
-  const quickLinks = (
+  // rendered twice (rail column on wide screens, after the attention list on phones): ids must stay unique
+  const quickLinks = (wide: boolean) => (
     <Panel label="Ludus" title="Quick links">
           <div className="quick">
             {quick.map((q) => (
-              <button key={q.name} id={`quick-${q.name}`} type="button" className="quick-btn" onClick={() => store.nav.area(q.name)}>
+              <button key={q.name} id={`quick${wide ? 'w' : ''}-${q.name}`} type="button" className="quick-btn" onClick={() => (q.name === 'ascension' ? store.nav.push({ name: 'ascension' }) : store.nav.area(q.name))}>
                 <Icon name={q.icon} size={22} />
                 <span>{q.label}</span>
                 {q.badge > 0 && <span className="tb-badge num">{q.badge}</span>}
@@ -379,7 +349,7 @@ export function HubScreen() {
             ))}
           </div>
           {g.results.length > 0 && (
-            <Btn className="mt-3" block variant="quiet" icon="scroll" onClick={() => store.nav.push({ name: 'results' })}>Last week&rsquo;s report</Btn>
+            <Btn id={`quick${wide ? 'w' : ''}-report`} className="mt-3" block variant="quiet" icon="scroll" onClick={() => store.nav.push({ name: 'results' })}>Last week&rsquo;s report</Btn>
           )}
         </Panel>
   );
@@ -410,7 +380,7 @@ export function HubScreen() {
           </div>
         </div>
         <div className="advance-big"><AdvanceButton /></div>
-        <div className="hide-narrow">{quickLinks}</div>
+        <div className="hide-narrow">{quickLinks(true)}</div>
         {g.world.ascension > 0 && <Hint icon="temple">Ascension {g.world.ascension}: the gods are watching this run.</Hint>}
       </div>
       <div className="stack">
@@ -434,7 +404,7 @@ export function HubScreen() {
             </ul>
           )}
         </Plaque>
-        <div className="hide-wide">{quickLinks}</div>
+        <div className="hide-wide">{quickLinks(false)}</div>
       </div>
       {conv && <ConversationSheet conv={conv} onClose={() => setConv(null)} />}
       {dec && <DecisionSheet d={dec} onClose={() => setDec(null)} />}

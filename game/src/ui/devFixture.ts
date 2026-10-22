@@ -372,7 +372,7 @@ export function buildDevFixture(o: Partial<NewGameOptions> = {}, meta?: Meta): G
   p.stories.studRequest = 1;
   p.conversations.push(conv);
 
-  p.defenses.push({ id: newId('x'), rivalId: batiatus.id, action: 'poison', agentId: oenomaus.id, targetCreatureId: tetraites.id, prompt: 0, chance: 0.35 });
+  p.defenses.push({ id: newId('x'), rivalId: batiatus.id, action: 'poison', agentId: oenomaus.id, targetCreatureId: tetraites.id, prompt: 0, chance: 35 });
 
   p.objectives = [
     { id: 'guidance3', startWeek: 1, progress: 1, goal: 1, done: true, claimed: false },

@@ -41,12 +41,40 @@ const SHOTS = [
   { name: 'market-eggs', hash: '#dev/market/eggs' },
   { name: 'market-keepers', hash: '#dev/market/keepers' },
   { name: 'arena', hash: '#dev/arena' },
+  { name: 'arena-calendar', hash: '#dev/arena/calendar' },
+  { name: 'arena-league', hash: '#dev/arena/league' },
+  { name: 'arena-organize', hash: '#dev/arena', click: ['#arena-organize'] },
+  { name: 'arena-register', hash: '#dev/arena', click: ['[id^="reg-"]'] },
+  { name: 'arenaplay-day', hash: '#dev/arenaPlay' },
+  { name: 'arenaplay-preview', hash: '#dev/arenaPlay', click: ['#arena-enter'] },
+  { name: 'arenaplay-prep', hash: '#dev/arenaPlay', click: ['#arena-enter', '#bribe-chains'], scroll: '.prep-card' },
+  { name: 'arenaplay-slot', hash: '#dev/arenaPlay', click: ['#arena-enter', '[id^="prep-"][id$="-armor"]'] },
+  { name: 'arenaplay-tactics', hash: '#dev/arenaPlay', click: ['#arena-enter', '[id^="tech-"]'] },
+  { name: 'arenaplay-report', hash: '#dev/arenaPlay', click: ['#arena-enter', '#arena-fight', '#battle-skip', '#battle-done'] },
+  { name: 'arenaplay-final', hash: '#dev/arenaPlay', click: ['#arena-auto', '#confirm-ok'] },
+  { name: 'arenaplay-pits', hash: '#dev/arenaPlay/pits', click: ['#arena-enter', '#arena-fight', '#battle-skip', '#battle-done', '#report-next'] },
   { name: 'estate', hash: '#dev/estate' },
   { name: 'finance', hash: '#dev/finance' },
   { name: 'messages', hash: '#dev/messages' },
   { name: 'objectives', hash: '#dev/objectives' },
   { name: 'events', hash: '#dev/events' },
   { name: 'intrigue', hash: '#dev/intrigue' },
+  { name: 'intrigue-defense', hash: '#dev/intrigue', click: ['.plaque .attn-item'] },
+  { name: 'intrigue-defense-outcome', hash: '#dev/intrigue', click: ['.plaque .attn-item', '#defense-assertive'] },
+  { name: 'rival', hash: '#dev/rival/first' },
+  { name: 'rival-creature', hash: '#dev/rival/first', click: ['[id^="rc-"]'] },
+  { name: 'rival-trade', hash: '#dev/rival/first', click: ['[id^="rc-"]', '#rc-offer'] },
+  { name: 'rival-agents', hash: '#dev/rival/first', click: ['#act-steal'] },
+  { name: 'rival-night', hash: '#dev/rival/first', click: ['#act-sabotage', '[id^="agent-"]'], wait: 900 },
+  { name: 'rival-report', hash: '#dev/rival/first', click: ['#act-sabotage', '[id^="agent-"]', '#scen-proceed'], wait: 1600 },
+  { name: 'influence', hash: '#dev/influence' },
+  { name: 'influence-info', hash: '#dev/influence', click: ['#opp-publicSessions'] },
+  { name: 'influence-unlocked', hash: '#dev/influence', click: ['#unlock-publicSessions'] },
+  { name: 'horde', hash: '#dev/horde/open' },
+  { name: 'horde-tactics', hash: '#dev/horde/tactics' },
+  { name: 'horde-result', hash: '#dev/horde/tactics', click: ['[id^="tactic-"]', '#battle-skip', '#battle-done'] },
+  { name: 'ascension', hash: '#dev/ascension' },
+  { name: 'defeated', hash: '#dev/defeated' },
   { name: 'results', hash: '#dev/results' },
   { name: 'results-hatch', hash: '#dev/results', click: ['#result-next', '#result-next', '#result-next'] },
   { name: 'results-report', hash: '#dev/results', click: ['#result-next', '#result-next', '#result-next', '#result-next', '#result-next'] },
@@ -92,9 +120,10 @@ for (const vp of viewports) {
         await page.waitForTimeout(500);
         for (const [sel, val] of s.fill ?? []) await page.fill(sel, val);
         for (const sel of s.click ?? []) {
-          await page.click(sel, { timeout: 5000 });
+          await page.locator(sel).first().click({ timeout: 5000 });
           await page.waitForTimeout(350);
         }
+        if (s.scroll) await page.locator(s.scroll).first().scrollIntoViewIfNeeded().catch(() => undefined);
         await page.waitForTimeout(s.wait ?? 250);
         const file = join(OUT, `${s.name}.${vp.tag}.${scheme}.png`);
         await page.screenshot({ path: file, fullPage: !!(s.full || flags.has('--full')) });

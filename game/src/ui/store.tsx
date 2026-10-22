@@ -67,7 +67,7 @@ export interface ActOpts<T> {
 }
 
 export interface BattleOverlayOpts {
-  /** names of side 0 and side 1 (default: your ludus on the player's side, "Opponents" on the other) */
+  /** [the player's side, the other side] (default: your ludus and "Opponents"); mapped to sides by playerSide */
   sideNames?: [string, string];
   /** which side is the player's when the result does not say (BattleResult.playerSide wins) */
   playerSide?: 0 | 1;

@@ -1,8 +1,9 @@
-// Settings dialog [MainActivity settings]: theme, sound (placeholder), battle speed, reduce motion, tooltips.
+// Settings dialog [MainActivity settings]: theme, sound, battle speed, reduce motion, tooltips.
 import React from 'react';
 import { useStore } from '../store';
 import { ScreenHead } from '../components/ScreenHead';
 import { Field, Hint, Panel, Plaque, Segmented, Toggle } from '../components/primitives';
+import { sfx, setSoundEnabled } from '../audio';
 
 export function SettingsScreen() {
   const store = useStore();
@@ -27,9 +28,8 @@ export function SettingsScreen() {
           </Field>
         </Panel>
         <Panel label="Audio" title="Sound">
-          <Toggle id="settings-sound" checked={s.sound} onChange={(sound) => store.setSettings({ sound })} label="Sound effects" />
-          <Toggle id="settings-music" checked={s.music} onChange={(music) => store.setSettings({ music })} label="Music" />
-          <Hint>Audio is not in the game yet; these switches are remembered for when it arrives.</Hint>
+          <Toggle id="settings-sound" checked={s.sound} onChange={(sound) => { store.setSettings({ sound }); setSoundEnabled(sound); if (sound) window.setTimeout(() => sfx.coin(), 30); }} label="Sound effects" desc="Taps, coins, arena drums, hits, roars and the crowd. All synthesised in the browser." />
+          <Toggle id="settings-music" checked={s.music} onChange={(music) => store.setSettings({ music })} label="Music" desc="Not in the game yet; the switch is remembered for when it arrives." />
         </Panel>
         <Panel label="About" title="Jurassic Ludus">
           <p className="small">A browser remake of Gladiator Manager&rsquo;s systems, with dinosaurs instead of gladiators and ARK: Survival Evolved breeding. Saves stay in this browser; use Export save to move them.</p>

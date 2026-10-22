@@ -1,18 +1,17 @@
 // Objectives [ObjectivesActivity], Messages [MessageActivity], Events [EventsActivity, LeagueActivity].
 import React, { useState } from 'react';
-import type { Decision, Message, MessageSender, ObjectiveState, TournamentDef } from '../../engine/types';
+import type { Decision, Message, MessageSender, ObjectiveState } from '../../engine/types';
 import { objectiveDef, claimObjective, objectiveProgressText } from '../../engine/objectives';
 import { acceptTransfer, declineTransfer } from '../../engine/market';
-import { upcoming } from '../../engine/tournaments';
 import { useStore } from '../store';
 import { ScreenHead } from '../components/ScreenHead';
 import { Btn, EmptyState, Meter, Panel, Pill, Plaque } from '../components/primitives';
 import { Sheet } from '../components/Sheet';
 import { Icon, type IconName } from '../components/Icon';
 import { DecisionSheet } from './Hub';
+import { CalendarPanel, LeaguePanel } from './Arena';
 import { safe } from '../safe';
 import { camelToWords, fmt } from '../format';
-import { houseById } from '../../engine/util';
 
 const OBJ_FALLBACK: Record<string, string> = {
   guidance1: 'Getting started 1/6: buy a dino', guidance2: 'Getting started 2/6: pick a technique', guidance3: 'Getting started 3/6: buy a weapon',
@@ -120,7 +119,6 @@ export function EventsScreen() {
   const store = useStore();
   const g = store.game!;
   const [dec, setDec] = useState<Decision | null>(null);
-  const next = safe(() => upcoming(g, 6), [] as TournamentDef[]);
   return (
     <>
       <ScreenHead title="Events" sub={`Week ${g.world.week}`} actions={g.results.length ? <Btn size="sm" icon="scroll" onClick={() => store.nav.push({ name: 'results' })}>Week report</Btn> : undefined} />
@@ -135,33 +133,8 @@ export function EventsScreen() {
             </button>
           ))}
         </Plaque>
-        <Panel label="Leagues" title="Standings">
-          {g.world.leagues.length === 0 && <p className="small muted">No league is running.</p>}
-          {g.world.leagues.map((l) => {
-            const rows = Object.entries(l.points).sort((a, b) => b[1] - a[1]).slice(0, 8);
-            return (
-              <div key={l.id} className="mb-3">
-                <div className="row between"><span className="strong">{l.name}</span><span className="xs muted">weeks {l.start}–{l.end} · pool {fmt(l.pool)}</span></div>
-                <table className="table mt-1">
-                  <tbody>
-                    {rows.map(([cid, pts], i) => (
-                      <tr key={cid} className={l.owners[cid] === g.player.ludus.id ? 'amber' : undefined}>
-                        <td className="num muted" style={{ width: 28 }}>{i + 1}</td>
-                        <td className="strong">{l.names[cid] ?? 'Unknown'}</td>
-                        <td className="muted">{houseById(g, l.owners[cid])?.name ?? ''}</td>
-                        <td className="num strong">{pts}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })}
-        </Panel>
-        <Panel label="Calendar" title="Coming up" className="span-2">
-          {next.length === 0 && <p className="small muted">The calendar is not available yet. This week&rsquo;s events are in the Arena.</p>}
-          {next.map((t, i) => <div key={i} className="ledger-line"><span>{t.name}</span><span className="muted xs">week {t.week} · {t.perTeam}v{t.perTeam}</span></div>)}
-        </Panel>
+        <LeaguePanel compact />
+        <div className="span-2"><CalendarPanel weeks={8} /></div>
       </div>
       {dec && <DecisionSheet d={dec} onClose={() => setDec(null)} />}
     </>

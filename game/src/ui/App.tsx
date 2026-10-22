@@ -24,9 +24,17 @@ import { BreedingScreen } from './screens/Breeding';
 import { MarketScreen } from './screens/Market';
 import { EstateScreen, FinanceScreen } from './screens/Estate';
 import { ObjectivesScreen, MessagesScreen, EventsScreen } from './screens/Ledger';
-import { ArenaScreen, ArenaPlayScreen } from './screens/Arena';
-import { IntrigueScreen, InfluenceScreen, HordeScreen } from './screens/Placeholders';
+import { ArenaScreen } from './screens/Arena';
+import { ArenaPlayScreen } from './screens/ArenaPlay';
+import { IntrigueScreen, RivalScreen } from './screens/Intrigue';
+import { InfluenceScreen } from './screens/Influence';
+import { HordeScreen } from './screens/Horde';
+import { AscensionScreen } from './screens/Ascension';
 import { ResultsScreen, DefeatedScreen } from './screens/Results';
+import { initAudio, setSoundEnabled } from './audio';
+import { eligibility, register } from '../engine/tournaments';
+import { beginAdvance } from '../engine/week';
+import { TACTIC_KEYS } from '../engine/data/politicsData';
 
 // ---------------------------------------------------------------------------------------------
 // Boot
@@ -52,11 +60,43 @@ function bootState(boot: HotData): StoreInit & { dev?: DevBoot } {
           : key === 'first' || !key ? me.creatures[0]?.id : key;
     let stack: ScreenRef[] = [{ name: 'hub' }];
     if (name === 'dino') stack = [{ name: 'hub' }, { name: 'ludus' }, { name: 'dino', id: pickId(a), tab: b }];
+    else if (name === 'rival') stack = [{ name: 'hub' }, { name: 'intrigue' }, { name: 'rival', id: a === 'first' || !a ? g.rivals[0]?.id : a }];
+    else if (name === 'arenaPlay') {
+      // register the best fighters for the first event they fit, then start the day (real engine on the fixture)
+      try {
+        const t = g.world.tournaments.find((x) => x.status === 'open' && x.type !== 'junior' && (a ? x.key === a : !x.underground)) ?? g.world.tournaments[0];
+        if (t.underground) t.teams = 2; // straight to the pit master's choice
+        if (!g.player.opportunities.includes('gambler')) g.player.opportunities.push('gambler'); // show the bookmakers
+        const fit = g.player.ludus.creatures.filter((c) => eligibility(g, t, c) === null).sort((x, y) => y.level - x.level).slice(0, t.perTeam);
+        register(g, t.id, [fit.map((c) => c.id)]);
+        beginAdvance(g);
+        g.player.week.uiAdvanceBegun = true;
+        stack = [{ name: 'hub' }, { name: 'arenaPlay', id: t.id }];
+      } catch (e) {
+        console.warn('dev arenaPlay setup failed', e);
+      }
+    } else if (name === 'defeated') {
+      g.over = { reason: (a as 'debt') || 'debt', week: g.world.week, influence: g.player.ludus.influence };
+      stack = [{ name: 'defeated' }];
+    } else if (name === 'horde' && a === 'tactics') {
+      const c = g.player.ludus.creatures.find((x) => x.kind === 'dino' && x.maturity >= 1);
+      g.world.horde.expeditionsEnabled = true;
+      if (c) {
+        const tactics = TACTIC_KEYS.slice(0, 3);
+        c.away = { kind: 'expedition', weeksLeft: 1, note: 'Hunting the Wild Horde' };
+        g.player.expedition = { commanderId: c.id, funds: 400, keepers: 2, capture: true, weeksLeft: 0, tactics, militia: 40 };
+        g.player.storyData.expeditionTactics = [...tactics];
+      }
+      stack = [{ name: 'hub' }, { name: 'horde' }];
+    } else if (name === 'horde' && a === 'open') {
+      g.world.horde.expeditionsEnabled = true;
+      stack = [{ name: 'hub' }, { name: 'horde' }];
+    }
     else if (name === 'results') {
       g.results = devSampleResults(g);
       stack = [{ name: 'hub' }, { name: 'results' }];
     } else if (name === 'codex') stack = [{ name: 'hub' }, { name: 'codex', page: a }];
-    else if (name !== 'hub' && name !== 'battle') stack = [{ name: 'hub' }, { name: name as ScreenName, tab: a }];
+    else if (!['hub', 'battle', 'rival', 'arenaPlay', 'defeated', 'horde', 'dino'].includes(name) || (name === 'horde' && !a)) stack = [{ name: 'hub' }, { name: name as ScreenName, tab: a }];
     return { game: g, meta, stack, dev: { battle: name === 'battle' } };
   }
   if (boot.save) {
@@ -89,7 +129,8 @@ const SCREENS: Record<ScreenName, React.ComponentType> = {
   menu: MainMenu, newgame: NewGameScreen, load: LoadScreen, upgrades: UpgradesScreen, achievements: AchievementsScreen,
   halloffame: HallOfFameScreen, settings: SettingsScreen, codex: CodexScreen, transfer: TransferScreen,
   hub: HubScreen, ludus: LudusScreen, dino: DinoScreen, breeding: BreedingScreen, market: MarketScreen, arena: ArenaScreen,
-  arenaPlay: ArenaPlayScreen, intrigue: IntrigueScreen, influence: InfluenceScreen, horde: HordeScreen, estate: EstateScreen,
+  arenaPlay: ArenaPlayScreen, intrigue: IntrigueScreen, rival: RivalScreen, influence: InfluenceScreen, horde: HordeScreen,
+  ascension: AscensionScreen, estate: EstateScreen,
   finance: FinanceScreen, objectives: ObjectivesScreen, messages: MessagesScreen, events: EventsScreen, results: ResultsScreen,
   defeated: DefeatedScreen,
 };
@@ -104,6 +145,15 @@ function Shell({ devBoot }: { devBoot?: DevBoot }) {
     didDev.current = true;
     store.showBattle(devBattle(game), 'Sparring bout (preview)');
   }, [devBoot, game, store]);
+
+  // sound: unlocked on the first gesture, follows Settings → Sound
+  useEffect(() => initAudio(), []);
+  useEffect(() => setSoundEnabled(store.meta.settings.sound), [store.meta.settings.sound]);
+
+  // a run can end mid-week (a lost raid decision): show the Defeated screen once any battle is closed
+  useEffect(() => {
+    if (game?.over && !battle && !BARE_SCREENS.has(screen.name)) store.nav.reset([{ name: 'defeated' }]);
+  }, [game?.over, battle, screen.name, store.nav]);
 
   // Android-style back on Escape (sheets handle their own Escape first)
   useEffect(() => {
@@ -145,11 +195,22 @@ function Shell({ devBoot }: { devBoot?: DevBoot }) {
           <TabBar />
         </div>
       )}
-      {battle && <BattleViewer result={battle.result} title={battle.title} onDone={store.closeBattle} initialSpeed={store.meta.settings.battleSpeed} sideNames={[game?.player.ludus.name ?? 'Your side', 'Opponents']} />}
+      {battle && <BattleOverlay />}
       <ToastHost />
       <ConfirmHost />
     </>
   );
+}
+
+/** The battle viewer over everything; side names follow the side the player fights on. */
+function BattleOverlay() {
+  const store = useStore();
+  const b = store.battle;
+  if (!b) return null;
+  const ps = b.result.playerSide ?? b.opts?.playerSide ?? 0;
+  const [mine, theirs] = b.opts?.sideNames ?? [store.game?.player.ludus.name ?? 'Your side', 'Opponents'];
+  const names: [string, string] = ps === 0 ? [mine, theirs] : [theirs, mine];
+  return <BattleViewer result={b.result} title={b.title} onDone={store.closeBattle} initialSpeed={store.meta.settings.battleSpeed} playerSide={ps} sideNames={names} />;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -180,9 +241,11 @@ const MORE: NavItem[] = [
 ];
 
 /** The top-level area the current stack belongs to (for highlighting). */
+const PARENT_AREA: Partial<Record<ScreenName, ScreenName>> = { arenaPlay: 'arena', rival: 'intrigue', ascension: 'influence' };
+
 function currentArea(stack: ScreenRef[]): ScreenName {
   for (let i = stack.length - 1; i >= 0; i--) {
-    const n = stack[i].name;
+    const n = PARENT_AREA[stack[i].name] ?? stack[i].name;
     if (TAB_SCREENS.includes(n) || MORE.some((m) => m.name === n)) return n;
   }
   return 'hub';

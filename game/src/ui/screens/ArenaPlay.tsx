@@ -268,8 +268,8 @@ function Intro({ t, onEnter }: { t: Tournament; onEnter: () => void }) {
               <div className="crow-main">
                 <div className="crow-name"><span className="nm">{c.name}</span><SexIcon sex={c.sex} size={14} /></div>
                 <div className="crow-sub">{SPECIES[c.species].name} · level {c.level} · fame {fmt(c.fame)}</div>
+                <span className="stat-mini">{STATS.map((s) => <span key={s}>{STAT_SHORT[s]} <b>{getStat(c, s)}</b></span>)}</span>
               </div>
-              <div className="crow-right"><span className="stat-mini">{STATS.map((s) => <span key={s}>{STAT_SHORT[s]} <b>{getStat(c, s)}</b></span>)}</span></div>
             </div>
           ))}
         </Panel>
@@ -568,6 +568,12 @@ function RoundReport({ t, r, onNext }: { t: Tournament; r: Extract<Phase, { kind
           <div className="micro row gap-1 center-x"><Icon name={r.won ? 'trophy' : 'skull'} size={14} />{r.label}</div>
           <h2 className={r.won ? 'good' : 'bad'}>{r.won ? 'Victory' : 'Defeat'}</h2>
         </div>
+        <div className="result-art">
+          {mineOut.map((o) => {
+            const c = g.player.ludus.creatures.find((x) => x.id === o.creatureId) ?? g.player.tomb.find((x) => x.creature?.id === o.creatureId)?.creature;
+            return c ? <DinoArt key={c.id} creature={c} width={130} dead={o.died} animate={!o.died} /> : null;
+          })}
+        </div>
         <p className="story-intro mt-3">{r.text}</p>
         {r.betPayout !== undefined && <p className="small">{r.betPayout > 0 ? <>The bookmakers paid <Money value={r.betPayout} size="sm" />.</> : 'The bookmakers kept your stake.'}</p>}
         <Rule>Your fighters</Rule>
@@ -618,7 +624,7 @@ function BonusChoice({ t, onChoose }: { t: Tournament; onChoose: (go: boolean) =
         </div>
         <div className="result-art">{cs.map((c) => <DinoArt key={c.id} creature={c} width={150} />)}</div>
         <p className="story-intro center">The sand is still wet. {left > 0 ? `Up to ${left} more round${left > 1 ? 's' : ''} await, each worth another 25 denarii.` : 'There is nobody left to fight.'}</p>
-        <div className="grid-2 mt-2">
+        <div className="kv-grid mt-2">
           <KV k="Next foe">{bonusFoeLabel(t, k)}</KV>
           <KV k="Bonus so far"><Money value={25 * won} size="sm" /></KV>
           {nextTrait && <KV k="Win it to earn">{TRAITS[nextTrait.trait]?.name ?? nextTrait.trait}</KV>}
@@ -650,7 +656,7 @@ function FinalReport({ t }: { t: Tournament }) {
   const league = t.league ? g.world.leagues.find((l) => l.id === t.league) : undefined;
   const rows = Object.entries(snap?.creatures ?? {}).map(([id, s]) => {
     const c = me.creatures.find((x) => x.id === id);
-    const dead = !c && g.player.tomb.some((x) => x.id === id || x.name === s.name);
+    const dead = !c && g.player.tomb.some((x) => x.creature?.id === id || x.name === s.name);
     const traits = c ? c.traits.filter((x) => !s.traits.includes(x)) : [];
     return { id, s, c, dead, traits, fame: c ? c.fame - s.fame : 0, level: c ? c.level - s.level : 0, points: league && c ? (league.points[id] ?? 0) - s.points : 0 };
   });
@@ -668,7 +674,7 @@ function FinalReport({ t }: { t: Tournament }) {
         <Plaque>
           <div className="result-head">
             <div className="micro row gap-1 center-x"><Icon name="trophy" size={14} />Final report</div>
-            <h2>{t.status !== 'done' ? 'Still running' : iWon ? 'Champions!' : champEntry ? `${entryName(g, champEntry)} win` : 'No champion'}</h2>
+            <h2>{t.status !== 'done' ? 'Still running' : iWon ? 'Champions!' : champEntry ? `Victory for ${entryName(g, champEntry)}` : 'No champion'}</h2>
           </div>
           {champEntry && (
             <div className="result-art">{entryCreatures(g, champEntry).slice(0, 3).map((c) => <DinoArt key={c.id} creature={c} width={140} />)}</div>
@@ -678,7 +684,7 @@ function FinalReport({ t }: { t: Tournament }) {
           ) : (
             <p className="small muted center mt-2">{iWon ? '' : 'Your fighters went home without a prize.'}</p>
           )}
-          <div className="grid-2 mt-3">
+          <div className="kv-grid mt-3">
             <KV k="Purse this event"><Money value={purse} signedValue /></KV>
             <KV k="Influence"><Influence value={infl} signedValue /></KV>
           </div>

@@ -14,13 +14,16 @@ src/ui/
   safe.ts               safe() / tryRead() / friendlyError()
   format.ts             pure formatting (numbers, stat labels, region names, hashing)
   derive.ts             stub-safe derived reads that touch engine logic (building totals, keepers, spies)
+  audio.ts              WebAudio synth (no files): sfx.tap/coin/levelUp/newWeek/hatch/hit/crit/miss/ko/cheer/groan/…
+  records.ts            account records the engine leaves to the app: game-over highscore + stats, Hall of Fame
   devFixture.ts         hand-built GameState, sample battle, sample week results
   components/           Icon, primitives (Panel, Plaque, Btn, Pill, Money…), Tabs, Sheet, Toast,
                         CreatureRow/CreaturePicker, GearPicker, ScreenHead
   art/                  DinoArt (+plans, geom), EggArt + Thermometer, ColorSwatches, EstateBanner, Portrait
   battle/BattleViewer   replays a BattleResult
-  screens/              one file per area (Hub, Ludus, DinoDetail, Breeding, Market, Estate, Ledger,
-                        Arena, Placeholders, Results, MainMenu, NewGame, Settings, Codex, DevGallery)
+  screens/              one file per area (Hub, Ludus, DinoDetail, Breeding, Market, Estate, Ledger, Arena,
+                        ArenaPlay, Intrigue, Influence, Horde, Ascension, Results, MainMenu, NewGame, Settings,
+                        Codex, DevGallery)
 ```
 
 ## 1. Tokens
@@ -103,10 +106,19 @@ triggers stories, so the hub runs it inside `act` in an effect.
 
 **Week flow:** `store.advance(onBlocked?)` → `beginAdvance` (once per week, flag in `player.week`) → if
 `attendedTournament()` is pending, route to `arenaPlay`; otherwise `store.finishWeek()` →
-`completeWeek` → `syncAscensionMeta` → results chain (`results` screen) → hub.
+`completeWeek` → `syncAscensionMeta` → Hall of Fame induction every 10th week and the game-over record
+(`records.ts`) → results chain (`results` screen) → hub. A run can also end mid-week (a lost raid decision):
+the shell routes to `defeated` as soon as `game.over` is set and no battle is on screen. The Defeated screen
+records the run once (`world.flags.uiRunRecorded`; never for dev data).
+
+**Sound:** `act()` plays a coin when the player's denarii change (pass `{ quiet: true }` when the caller has
+its own cue), achievements play the harp, `finishWeek` the drums and a lyre when a dino levelled. Buttons,
+tabs and switches tick through one capture listener (`initAudio`, mounted by the shell, which also unlocks the
+AudioContext on the first gesture). Everything obeys Settings → Sound (`setSoundEnabled`).
 
 **Overlays:** `await store.confirm({ title, text, confirmLabel, danger })` (never `window.confirm`),
-`store.toast(text, kind)`, `store.showBattle(result, title, onDone)`.
+`store.toast(text, kind)`, `store.showBattle(result, title, onDone, { sideNames: [mine, theirs] })`: the viewer
+puts the names on the right sides from `BattleResult.playerSide`.
 
 ## 4. Navigation
 
@@ -147,6 +159,12 @@ render `<Tabs value onChange={(t) => store.nav.update({ tab: t })} />`. Give eve
 | `CreaturePicker` | multi-select (`max`), kind chips + species filter, `eligible(c) → reason|null` greys out with the reason |
 | `GearPicker` | armory items for one slot, worth, who wears it, stat deltas vs current; `gearLineText(g)` |
 | `ScreenHead` | back arrow when the stack allows, title, sub, actions |
+| `formatChips(g, t)` (Arena) | event format pills: NvN, teams, level cap, hatchlings only, no harness, riders rule, beasts, bonus rounds, league, host, fee, prize |
+| `LeaguePanel` / `CalendarPanel` (Arena) | league table with prizes and rounds (`compact` for side columns); upcoming events by week |
+| `DefenseSheet` (Intrigue) | a rival scheme against you: `defensePromptText`, Assertive / Passive, the outcome |
+| `ScenarioSheet` (Intrigue) | the night scene for a planned `IntrigueOrder`: scenario text and roll hint, Proceed / Retreat, report (raids open the battle viewer) |
+| `TechOrderSheet` (ArenaPlay) | technique priority, saved with `setTechOrder` |
+| `Req` (Influence) | met / unmet requirement line |
 | `Icon` | inline SVG set (24px grid, stroke 1.75, currentColor) — see `ICONS` in `Icon.tsx`; `SexIcon` |
 
 ## 6. Art
@@ -172,10 +190,32 @@ presentation of a `BattleResult`: HUD strip (HP from `log[i].hp`), sprites per s
 hit flash/shake, damage numbers, crit emphasis, KO slump, round counter, 1×/2×/4×, Step, Skip, full log with
 auto-follow that pauses when the player scrolls up. Usually opened through `store.showBattle`.
 
-**For the Arena engineer:** `ArenaPlayScreen` (screens/Arena.tsx) is the placeholder for the match flow.
-Replace it with: `nextPlayerMatch` → prep sheet (gear via `GearPicker`, instructions, bribes, bets) →
-`store.act(s => playMatch(s, t, prep))` → `store.showBattle(result.result, …)` → loop; then
-`store.finishWeek()`. Registration (`RegisterSheet`) and the tournament list are already real.
+## 7b. Arena, intrigue, influence, horde, ascension
+
+- **Tournament day** (`screens/ArenaPlay.tsx`, screen `arenaPlay`, id = tournament id): intro card → loop
+  `nextPlayerMatch` (always inside `act`: it resolves AI matches and fixes the AI's cheat) → preview (versus
+  panel with `prepareFighter` loadouts, odds, "Bribed guards" / "Fair play expected") + preparation (per-slot
+  harness override via `GearPicker`, instruction with GM yield/injury notes, technique order, one bribe with
+  `cheatCost`/`cheatAvailable`, a bet with the Gambler) → `playMatch` → battle viewer → round report → pits:
+  `bonusPending` and no pending bonus match ⇒ Keep fighting / Retire (`continueBonus`) → final report (prizes
+  from the `»` log lines, fame/traits/league points against a snapshot taken when the day began, the bracket)
+  → `store.finishWeek()`. Preparation and the snapshot live in module maps keyed by tournament id, so leaving
+  the screen mid-tournament and coming back resumes. "Resolve automatically" (`autoResolve`) is always there.
+- **Arena tab**: This week (format chips, registration, your fighters), Calendar (`upcoming`), League
+  (`activeLeague` + `leagueStandings`, prizes per place), Organize sheet (The Organizer, 300 denarii).
+- **Intrigue** (`intrigue`, `rival`): rivals by influence with spy-gated wealth (your committed spies > theirs)
+  and keepers (> theirs / 2); the dossier spy-gates creature stats with the market table (age 1, STR 2,
+  AGI 3, CUN 5, HP 7, traits 8+). House actions and creature actions show `chanceRange`; the agent sheet shows
+  `intrigueChance` per agent (registered fighters sink to the bottom with a warning) → `planIntrigue` →
+  `ScenarioSheet` (sticky until decided; undecided plans are listed on the Intrigue tab) → `resolveIntrigue`.
+  Trade: `rivalAskingPrice`, `offerToRival` (wrapped so a refusal is shown in the sheet, not as an error toast).
+- **Influence** (`influence`): standing and weekly gain (`influenceGain`), the tree from `treeFor` (path tabs
+  on phones, three columns ≥ 900px), unlock/toggles/swaps, elections (`startElection`, `setElectionAction`,
+  `projectedVotes`), the Ascension teaser.
+- **Horde** (`horde`): `hordeIntel` gating, rogues, raid news, expedition setup (`expeditionPreview`) and the
+  tactics cards when `storyData.expeditionTactics` is set (also a hub attention row).
+- **Ascension** (`ascension`, pushed from Influence or the hub quick link): `ascensionProgress`, the 16 levels,
+  the account's unlocked levels (`selectableAscension`), the champion and reincarnation.
 
 ## 8. Dev data, deep links, screenshots
 
@@ -183,10 +223,18 @@ Replace it with: `nextPlayerMatch` → prep sheet (gear via `GearPicker`, instru
   requests, a real stud-request story, a real breeding event, rival offer, pedigree records). New Game falls
   back to it when `createNewGame` throws; such games show a **dev data** tag in the status bar.
 - Deep links (dev only, slot 99 so real saves are never touched): `#dev/<screen>[/<tab or id>][/<tab>]`, e.g.
-  `#dev/breeding/hatchery`, `#dev/dino/bred/genetics`, `#dev/results`, `#dev/battle`, `#dev/menu`.
+  `#dev/breeding/hatchery`, `#dev/dino/bred/genetics`, `#dev/results`, `#dev/battle`, `#dev/menu`,
+  `#dev/arenaPlay[/<event key>]` (registers the best fighters and starts the day on the real engine; `pits`
+  shrinks the bracket to reach the pit choice), `#dev/rival/first`, `#dev/horde/open`, `#dev/horde/tactics`,
+  `#dev/defeated[/<reason>]`, `#dev/ascension`, `#dev/influence`. Dev data shares the account meta in this
+  browser: achievements earned on it are real.
   `#gallery` renders every species, baby and gear overlay.
 - `node scripts/ui-shot.mjs [names…] [--mobile|--desktop] [--dark|--light]` with `npx vite --port 5173`
   running; output in `$SHOT_DIR`. It also reports console errors and horizontal overflow.
+- `node scripts/e2e.mjs [--weeks=7] [--desktop] [--light]`: a whole session on the real engine (new game,
+  market, Rome's Finest with preparation and the battle viewer, the results chain, then more weeks with
+  decisions, schemes, one intrigue action and an influence unlock when affordable). Exits 1 on any console
+  error; screenshots in `$SHOT_DIR` (default `<tmp>/jl-e2e`).
 
 ## 9. Copy and patterns
 

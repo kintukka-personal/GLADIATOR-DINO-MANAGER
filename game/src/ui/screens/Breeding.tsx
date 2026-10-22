@@ -17,7 +17,7 @@ import { buyFood, sellEgg } from '../../engine/market';
 import { useStore } from '../store';
 import { ScreenHead } from '../components/ScreenHead';
 import { Tabs } from '../components/Tabs';
-import { Btn, EmptyState, Hint, KV, Meter, Money, Panel, Pill, Plaque, Rule, Segmented, Toggle } from '../components/primitives';
+import { Btn, EmptyState, Hint, KV, Meter, Money, Panel, Pill, Plaque, Rule, Toggle } from '../components/primitives';
 import { Sheet } from '../components/Sheet';
 import { Icon, SexIcon, type IconName } from '../components/Icon';
 import { CreaturePicker, SpeciesSelect } from '../components/CreatureRow';
