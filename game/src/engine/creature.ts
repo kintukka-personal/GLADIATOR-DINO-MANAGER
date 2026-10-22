@@ -452,7 +452,8 @@ export function distributeWild(species: SpeciesId, n: number): Stats {
   const w = SPECIES[species].weights;
   const out = zeroStats();
   for (let i = 0; i < n; i++) {
-    const s = weighted(STATS, STATS.map((k) => w[k] + 1));
+    // a health point is worth 5 HP, so health draws at half weight to keep totals near GM's 25–35 HP
+    const s = weighted(STATS, STATS.map((k) => (k === 'hp' ? w[k] / 2 : w[k]) + 1));
     out[s]++;
   }
   return out;

@@ -8,7 +8,7 @@ import type {
   Personality, Quality, ResultCard, Sex, SpeciesId, StoryConversation, Tournament, TournamentDef, TraitId,
 } from '../engine/types';
 import { makeLudus, SAVE_VERSION, type NewGameOptions } from '../engine/newgame';
-import { generateBeast, generateDino, makeNamed, maxHp, getStat, setLevelAndStats, addTrait } from '../engine/creature';
+import { generateBeast, generateDino, makeNamed, maxHp, getStat, addTrait } from '../engine/creature';
 import { ancestorRecord, generateMarketEgg, makeNewborn, parentGenes, rollOffspringGenes, rollTemperature } from '../engine/breeding';
 import { makeGear } from '../engine/data/gear';
 import { FOODS, FOOD_IDS } from '../engine/data/food';
@@ -16,6 +16,8 @@ import { SPECIES } from '../engine/data/species';
 import { TECHNIQUES } from '../engine/data/techniques';
 import { getSeed, setSeed } from '../engine/rng';
 import { getIdCounter, newId, setIdCounter, zeroStats } from '../engine/util';
+import { eventDef } from '../engine/events';
+import { studAsk } from '../engine/data/storiesData';
 import { DEV_FLAG } from './store';
 import { seeded } from './art/geom';
 
@@ -90,7 +92,7 @@ export function buildDevFixture(o: Partial<NewGameOptions> = {}, meta?: Meta): G
     player: {
       lanista, female, heritage: o.heritage ?? 'roman', ludus: me, opportunities: [], treeSeed: 7,
       toggles: { publicSessions: false, bribeGeneral: false, loan: false }, senator: false, consul: false,
-      objectives: [], stories: { soloniusThrow: 1 }, storyData: { [DEV_FLAG]: true }, messages: [], decisions: [], decisionHistory: [],
+      objectives: [], stories: { soloniusThrow: 9 }, storyData: { [DEV_FLAG]: true }, messages: [], decisions: [], decisionHistory: [],
       delayed: [], adventures: [], conversations: [], registrations: {}, intrigue: [], defenses: [], offers: [], tomb: [],
       organized: 0, leagueWins: 0, invaderWins: 0, tutorial: 6, bets: {}, week: {}, counters: { hatched: 2 },
     },
@@ -338,29 +340,36 @@ export function buildDevFixture(o: Partial<NewGameOptions> = {}, meta?: Meta): G
   p.offers.push(offer);
   p.messages.unshift({ id: newId('m'), week: WEEK, sender: 'rival', title: 'An offer from Batiatus', text: 'Batiatus admires your Velociraptor Flamma and offers 640 denarii. The offer stands until next week.', read: false, offer });
 
-  const d: Decision = {
+  // a real breeding event when the events module can build one, else a static stand-in
+  let d: Decision | null = null;
+  for (const key of ['strangeEgg', 'studServices', 'breedersFair', 'geneMerchant', 'proudMother', 'eggPoachers']) {
+    try {
+      d = eventDef(key)?.make(state) ?? null;
+    } catch {
+      d = null;
+    }
+    if (d) break;
+  }
+  p.decisions.push(d ?? {
     id: newId('d'), key: 'devEggMerchant', title: 'A Merchant of Eggs', week: WEEK, art: 'merchant',
-    text: 'A Nabataean trader unwraps a warm bundle of straw: a speckled egg "from the dunes beyond Petra". He swears it will hatch into something the arena has never seen. He wants 180 denarii, and he keeps glancing at the gate.',
+    text: 'A Nabataean trader unwraps a warm bundle of straw: a speckled egg "from the dunes beyond Petra". He wants 180 denarii, and he keeps glancing at the gate.',
     options: [
       { label: 'Buy the egg', desc: '−180 denarii. It goes into the hatchery.' },
       { label: 'Have a spy follow him first', desc: 'Find out where he got it.', disabled: true, reason: 'Needs 2 committed spies' },
       { label: 'Send him on his way' },
     ],
     data: {},
-  };
-  p.decisions.push(d);
+  });
 
+  // Batiatus asks to borrow Bendis as a stud (a real storyline: studRequest)
+  const stud = studAsk(bendis.name, tirsa.name, SPECIES[tirsa.species].name);
   const conv: StoryConversation = {
-    id: newId('s'), story: 'soloniusThrow', step: 2, actor: 'solonius', title: 'Quid pro quo',
-    lines: [
-      { actor: 'solonius', text: `Ah, ${lanista}. Your little Carnotaurus fought well last week. Too well, perhaps.` },
-      { actor: 'player', text: 'He fought as he was trained.' },
-      { actor: 'solonius', text: 'Then train him to stumble. Next week, in the Ludi Plebeii, my Troodon will face him. Let it win and 300 denarii find their way into your purse.' },
-      { actor: 'narrator', text: 'Solonius smiles the smile of a man who has never lost a bet he arranged himself.' },
-    ],
-    options: [{ label: 'Take the deal', desc: '+300 denarii; Tetraites must lose.' }, { label: 'Refuse', desc: 'Solonius will remember.' }, { label: 'Ask for more', desc: 'Push your luck.' }],
-    data: {},
+    id: newId('s'), story: 'studRequest', step: 1, actor: 'batiatus', title: stud.title,
+    lines: stud.lines.map((l) => (l.actor === 'unknown' ? { ...l, actor: 'batiatus' as const } : l)),
+    options: stud.options.map((o) => ({ ...o })),
+    data: { kind: 'ask', week: WEEK, rivalId: batiatus.id, speaker: batiatus.name, maleId: bendis.id, femaleId: tirsa.id },
   };
+  p.stories.studRequest = 1;
   p.conversations.push(conv);
 
   p.defenses.push({ id: newId('x'), rivalId: batiatus.id, action: 'poison', agentId: oenomaus.id, targetCreatureId: tetraites.id, prompt: 0, chance: 0.35 });
@@ -473,11 +482,4 @@ export function devSampleResults(state: GameState): ResultCard[] {
       { kind: 'warning', text: 'Tameness of Bendis is falling (72).' }, { kind: 'bad', text: 'Sobek is still injured (2 weeks).' },
     ] },
   ];
-}
-
-/** Synthetic "new game" used on the fallback path keeps the wizard's choices. */
-export function fixtureFromOptions(o: NewGameOptions, meta: Meta): GameState {
-  const s = buildDevFixture(o, meta);
-  void setLevelAndStats;
-  return s;
 }

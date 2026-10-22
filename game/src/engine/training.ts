@@ -290,9 +290,9 @@ function trainOne(state: GameState, h: Ludus, c: Creature, doc: Creature | undef
     addTrait(c, 'Doctore');
     notes.push(`${c.name} has become a true Pack Mentor.`);
   }
-  // training injury
+  // training injury (an injured creature only does light rehabilitation and is not hurt again)
   const risk = chance(0.5) ? 0 : TRAINING_RISK[type];
-  const inj = rollInjury(injuryProne(c) + risk - protection, false);
+  const inj = c.injury ? null : rollInjury(injuryProne(c) + risk - protection, false);
   if (inj && inj !== 'dead') {
     const r = injureWithPoultice(state, h, c, inj);
     notes.push(r === 'poultice' ? `${c.name} got hurt in training; a poultice patched it up.` : `${c.name} was injured in training (${c.injury!.type}, ${c.injury!.weeks} weeks).`);

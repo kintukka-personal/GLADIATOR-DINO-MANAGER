@@ -194,8 +194,8 @@ export function resolveWeek(state: GameState): void {
   // --- Stories, achievements, next week's events --------------------------------------------
   storyWeek(state);
   checkAchievements(state);
-  seedWeekTournaments(state);
   resetWeekFlags(state);
+  seedWeekTournaments(state);
   state.runStats.peakInfluence = Math.max(state.runStats.peakInfluence, me.influence);
 
   if (breakout) results.push(breakout);

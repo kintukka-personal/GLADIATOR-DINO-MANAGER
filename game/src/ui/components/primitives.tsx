@@ -59,9 +59,10 @@ export interface BtnProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
   block?: boolean;
 }
 
-export function Btn({ icon, iconRight, variant = 'default', size = 'md', block, className, children, type = 'button', ...rest }: BtnProps) {
+export const Btn = React.forwardRef<HTMLButtonElement, BtnProps>(function Btn({ icon, iconRight, variant = 'default', size = 'md', block, className, children, type = 'button', ...rest }, ref) {
   return (
     <button
+      ref={ref}
       type={type}
       className={`btn btn-${variant} btn-${size}${block ? ' btn-block' : ''}${!children ? ' btn-icon' : ''}${className ? ` ${className}` : ''}`}
       {...rest}
@@ -71,7 +72,7 @@ export function Btn({ icon, iconRight, variant = 'default', size = 'md', block, 
       {iconRight && <Icon name={iconRight} size={size === 'sm' ? 16 : 18} />}
     </button>
   );
-}
+});
 
 // ---------------------------------------------------------------------------------------------
 // Pill

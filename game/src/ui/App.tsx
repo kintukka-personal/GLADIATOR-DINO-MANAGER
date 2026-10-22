@@ -146,7 +146,7 @@ function Shell({ devBoot }: { devBoot?: DevBoot }) {
         </div>
       )}
       {store.dev && game && <div className="dev-ribbon" aria-hidden="true">dev data</div>}
-      {battle && <BattleViewer result={battle.result} title={battle.title} onDone={store.closeBattle} />}
+      {battle && <BattleViewer result={battle.result} title={battle.title} onDone={store.closeBattle} initialSpeed={store.meta.settings.battleSpeed} sideNames={[game?.player.ludus.name ?? 'Your side', 'Opponents']} />}
       <ToastHost />
       <ConfirmHost />
     </>

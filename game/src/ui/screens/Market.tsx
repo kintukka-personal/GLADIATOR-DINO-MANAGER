@@ -10,9 +10,10 @@ import { FOODS, FOOD_IDS } from '../../engine/data/food';
 import { ageLabel, getStat, lifePhase, marketPrice, wildLevel } from '../../engine/creature';
 import { eggValue, eggVisible } from '../../engine/breeding';
 import {
-  acceptTransfer, buyCreature, buyEgg, buyFood, buyGear, declineTransfer, hireKeepers, intel, isLocked, marketCreaturePrice, marketGearPrice, sellGear,
+  acceptTransfer, buyCreature, buyEgg, buyFood, buyGear, declineTransfer, intel, isLocked, marketCreaturePrice, marketGearPrice, sellGear,
   type MarketIntel,
 } from '../../engine/market';
+import { hireKeepers } from '../../engine/economy';
 import { useStore } from '../store';
 import { ScreenHead } from '../components/ScreenHead';
 import { Tabs } from '../components/Tabs';

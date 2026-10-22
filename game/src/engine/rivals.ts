@@ -30,6 +30,7 @@ import { makeLudus } from './newgame';
 import { cleanPairs, registerAncestor } from './breeding';
 import { publicSessionsIncome } from './influence';
 import { addKeepers } from './economy';
+import { buildingTotals } from './buildings';
 import { build, canBuild } from './buildings';
 import { rewardCreature } from './loyalty';
 import { joinHorde } from './horde';
@@ -583,7 +584,7 @@ function aiBuyKeepers(state: GameState, r: Ludus): void {
   // starved themselves buying guards).
   const need = (r.denarii > 400 && total < Math.floor(week / 2) + 2)
     || ((unhappyCount(r) > 1 || rebelThreat(state, r)) && r.denarii > buf + 100)
-    || r.denarii > 1500;
+    || (r.denarii > 1500 && total < Math.max(20, buildingTotals(r).beds + 10));
   if (!need) return;
   let n = 0;
   while (n < 3 && r.denarii - 100 >= buf) {
@@ -683,7 +684,9 @@ function aiGear(state: GameState, r: Ludus): void {
   const count = (slot: string) => r.armory.filter((g) => GEAR[g.type].slot === slot).length;
   const wantSlot = count('weapon') < dinos ? 'weapon' : count('armor') < dinos ? 'armor' : count('helmet') < dinos ? 'helmet' : null;
   if (wantSlot) {
-    const piece = market.oldGear.filter((g) => GEAR[g.type].slot === wantSlot && !g.unique)
+    // on Normal the AI keeps to gear the player could also buy; Hard and Nightmare houses get the premium kit too
+    const allowed = (g: Gear) => state.world.difficulty.hard || !GEAR[g.type].upgrade || hasUpgrade(state, GEAR[g.type].upgrade!);
+    const piece = market.oldGear.filter((g) => GEAR[g.type].slot === wantSlot && !g.unique && allowed(g))
       .sort((a, b) => gearWorth(b) - gearWorth(a))
       .find((g) => r.denarii - Math.floor(gearWorth(g) * 0.75) >= 2 * buf);
     if (piece) {

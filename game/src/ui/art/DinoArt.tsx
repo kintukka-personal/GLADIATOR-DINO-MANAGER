@@ -31,6 +31,8 @@ export interface DinoArtProps {
   height?: number;
   /** extra scale inside the frame (battle sprites use size class) */
   scale?: number;
+  /** draw young creatures at full frame size (default for bust framing); otherwise they are smaller */
+  fill?: boolean;
   animate?: boolean;
   /** greyed out (knocked out, dead, tomb) */
   dead?: boolean;
@@ -126,7 +128,8 @@ function DinoArtImpl(props: DinoArtProps) {
   const young = 1 - maturity;
 
   // geometry transforms
-  const s = (props.scale ?? 1) * (framing === 'bust' ? 0.62 + 0.38 * maturity : 0.56 + 0.44 * maturity);
+  const fill = props.fill ?? framing === 'bust';
+  const s = (props.scale ?? 1) * (fill ? 0.82 + 0.18 * maturity : 0.56 + 0.44 * maturity);
   const k = 1 + 0.55 * young; // head scale for babies
   const [px, py] = plan.head.pivot;
   const headT = k === 1 ? undefined : `translate(${px} ${py}) scale(${k.toFixed(3)}) translate(${-px} ${-py})`;
@@ -136,9 +139,14 @@ function DinoArtImpl(props: DinoArtProps) {
 
   let vb: [number, number, number, number] = [0, 0, 240, 160];
   if (framing === 'bust') {
-    const [bx, by, bw, bh] = plan.bust;
-    const pad = young * 10;
-    vb = [cx + (bx - cx) * s - pad, gy + (by - gy) * s - pad * 1.2, bw * s + pad * 2, bh * s + pad * 2];
+    // tighter than the authored box, anchored on the head end (right) and the top
+    const [bx0, by, bw0, bh0] = plan.bust;
+    const bw = bw0 * 0.88;
+    const bh = bh0 * 0.88;
+    const bx = bx0 + bw0 - bw;
+    const pad = young * 9;
+    vb = [cx + (bx - cx) * s - pad, gy + (by - gy) * s - pad * 1.4, bw * s + pad * 2, bh * s + pad * 2];
+    if (props.flip) vb[0] = 240 - vb[0] - vb[2];
   }
   const width = props.width ?? (framing === 'bust' ? 56 : 220);
   const height = props.height ?? Math.round((width * vb[3]) / vb[2]);
@@ -261,7 +269,7 @@ function DinoArtImpl(props: DinoArtProps) {
             <use href={`#${uid}-sil`} fill={`url(#${uid}-shu)`} />
             <rect x="-40" y="-40" width="320" height="240" fill="#fff4de" opacity={0.42} mask={`url(#${uid}-rim)`} />
             {gear.armor && (
-              <g clipPath={`url(#${uid}-ca)`}>
+              <g clipPath={`url(#${uid}-cb)`}>
                 <path d={plan.anchors.band} fill="#8a6a3f" stroke="#3b2a16" strokeWidth={1} />
                 <path d={plan.anchors.band} fill={`url(#${uid}-sh)`} />
                 <path d={plan.anchors.band} fill="none" stroke="#d8b878" strokeOpacity={0.6} strokeWidth={0.8} strokeDasharray="1.4 4" />

@@ -438,5 +438,6 @@ export function bury(state: GameState, c: Creature, cause: string): void {
     c.gear = {};
     state.world.horde.rogues = state.world.horde.rogues.filter((x) => x.id !== c.id);
   }
-  registerAncestor(state, c, h?.name, cause);
+  // keep pedigree records for bloodlines only (bred creatures, parents, the player's own)
+  if (c.genes.bred || c.offspring > 0 || state.ancestry[c.id] || h === state.player.ludus) registerAncestor(state, c, h?.name, cause);
 }

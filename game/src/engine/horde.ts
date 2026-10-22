@@ -817,7 +817,8 @@ function playerRaidDecision(state: GameState): Decision {
       },
       {
         label: 'Hide behind the palisade',
-        desc: `−5 influence. They plunder about ${n.hide} denarii${n.short ? ', and with so few wardens they will take keepers and maybe a dino too' : ''}.`,
+        desc: `−5 influence. They plunder about ${n.hide} denarii${n.short ? ', and with so few wardens they will take keepers and maybe a dino too' : ''}.` +
+          (n.short && !me.creatures.some((c) => !c.away && canFightAge(c)) ? ' With no dino at home to stand in their way, the ludus will fall.' : ''),
       },
     ],
     data: { army: a, danger: n.danger, cost: n.cost, hide: n.hide, short: n.short, extra },
