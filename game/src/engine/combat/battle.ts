@@ -259,7 +259,7 @@ export class Battle {
       if (mods.includes('Chained')) for (const f of mine) addStatus(this, f, 'CHAINED', 99, 0, -1);
       if (mods.includes('CurseOfTime')) {
         for (const f of mine) {
-          for (const t of f.techs) t.cd = TECHNIQUES[t.id].cooldown;
+          for (const t of f.techs) t.cd = TECHNIQUES[t.id]?.cooldown ?? 0;
           addStatus(this, f, 'TIME_CURSE', 99, 0, -1, true);
         }
         this.log('info', `Time itself drags at ${this.sides[side].name}'s fighters.`);

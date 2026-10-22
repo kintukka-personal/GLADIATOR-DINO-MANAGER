@@ -641,7 +641,7 @@ describe('more mechanics', () => {
     }
   });
 
-  it('Spectral Saddle summons a rider; mandrakes and temporaries never win alone', () => {
+  it('Spectral Saddle summons a spectral rider', () => {
     setSeed(1800);
     const c = dino('iguanodon', 'Ghostrider', st(8, 8, 5, 40));
     const b = new Battle([side('A', [F(c, { item: G('spectralSaddle', 2) })]), side('B', [F(dino('iguanodon', 'Foe', st(8, 8, 5, 40)))])], opts());

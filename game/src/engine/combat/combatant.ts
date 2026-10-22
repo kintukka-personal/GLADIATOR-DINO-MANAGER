@@ -7,6 +7,7 @@ import { WEAPON_FAMILIES } from '../types';
 import { GEAR, gearLine } from '../data/gear';
 import { SPECIES, isGiantSize } from '../data/species';
 import { CLASSES } from '../data/classes';
+import { TECHNIQUES } from '../data/techniques';
 import { getStat, rawStat, isKid } from '../creature';
 import type { Fighter, Line, OffKind, Piece, StatusId } from './model';
 
@@ -372,7 +373,7 @@ export function buildFighter(bf: BattleFighter, idx: number, ctx: BuildCtx): Fig
 
   // ---- techniques (all cooldowns reset; manual priorities from the Tactics order)
   const order = c.techOrder ?? [];
-  const techs = c.techniques.filter((t) => t.equipped).map((t) => {
+  const techs = c.techniques.filter((t) => t.equipped && !!TECHNIQUES[t.id]).map((t) => {
     const i = order.indexOf(t.id);
     return { id: t.id, rank: Math.max(1, t.rank), cd: 0, manual: i >= 0 ? 100 * (order.length - i) : 0 };
   });

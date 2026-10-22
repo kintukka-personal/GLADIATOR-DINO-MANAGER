@@ -56,7 +56,8 @@ export function houseWeek(state: GameState, h: Ludus): ResultCard | null {
       }
     }
   }
-  const rebels = state.world.difficulty.betrayalsDisabled ? [] : loyaltyWeek(state, h);
+  // loyaltyWeek always applies the weekly tameness change; it suppresses breakouts itself when betrayals are off
+  const rebels = loyaltyWeek(state, h);
   trainingWeek(state, h);
   // breeding
   const b1 = breedingWeek(state, h);

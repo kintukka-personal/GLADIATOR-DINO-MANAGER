@@ -133,6 +133,14 @@ describe('creature management', () => {
     expect(toggleTech(s, a.id, 'Smash')).toBeNull();
     expect(a.techniques[0].equipped).toBe(false);
   });
+  it("a species' natural technique ranks up without its Amber upgrade", () => {
+    const { s, h } = armed();
+    const p = dino('parasaurolophus');
+    p.techniques.push({ id: 'Rally', rank: 1, equipped: true });
+    addTo(h, p);
+    expect(learnTech(s, p.id, 'Rally')).toBeNull();
+    expect(p.techniques[0].rank).toBe(2);
+  });
   it('bonding: fame > 20, 25 denarii, one at a time, crest with the upgrade', () => {
     const { s, h, a, b } = armed();
     expect(bond(s, a.id)).toMatch(/fame/);
