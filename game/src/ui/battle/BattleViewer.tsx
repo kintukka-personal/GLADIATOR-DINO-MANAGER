@@ -7,6 +7,7 @@ import type { BattleLogLine, BattleResult, LogKind } from '../../engine/types';
 import { DinoArt } from '../art/DinoArt';
 import { Icon, type IconName } from '../components/Icon';
 import { Btn, Meter, Pill, Segmented } from '../components/primitives';
+import { sfx } from '../audio';
 
 export interface BattleViewerProps {
   result: BattleResult;
@@ -30,7 +31,8 @@ const KIND_ICON: Partial<Record<LogKind, IconName>> = {
 };
 
 
-export function BattleViewer({ result, onDone, title, initialSpeed = 1, playerSide = 0, sideNames, autoplay = true }: BattleViewerProps) {
+export function BattleViewer({ result, onDone, title, initialSpeed = 1, playerSide: sideProp, sideNames, autoplay = true }: BattleViewerProps) {
+  const playerSide: 0 | 1 = result.playerSide ?? sideProp ?? 0;
   const log = result.log;
   const last = log.length - 1;
   const [idx, setIdx] = useState(-1);
@@ -63,6 +65,25 @@ export function BattleViewer({ result, onDone, title, initialSpeed = 1, playerSi
       window.setTimeout(() => doneRef.current?.focus({ preventScroll: true }), 50);
     }
   }, [finished]);
+
+  // sound for each line shown (a Skip only plays the ending)
+  const prevIdx = useRef(-1);
+  useEffect(() => {
+    const prev = prevIdx.current;
+    prevIdx.current = idx;
+    if (idx < 0 || idx === prev) return;
+    const l = log[idx];
+    if (idx === last) {
+      if (result.winner === playerSide) sfx.cheer(); else sfx.groan();
+      if (l?.kind === 'ko') sfx.ko();
+      return;
+    }
+    if (idx - prev > 1 || !l) return;
+    if (l.kind === 'ko') sfx.ko();
+    else if (l.crit || l.kind === 'crit') sfx.crit();
+    else if (l.kind === 'miss') sfx.miss();
+    else if ((l.kind === 'attack' || l.kind === 'tech' || l.kind === 'glance') && l.dmg) sfx.hit();
+  }, [idx, last, log, playerSide, result.winner]);
 
   // stage size for sprite scaling
   useLayoutEffect(() => {

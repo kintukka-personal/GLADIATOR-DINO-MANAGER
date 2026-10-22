@@ -11,6 +11,8 @@ import { beginAdvance, completeWeek } from '../engine/week';
 import { attendedTournament } from '../engine/tournaments';
 import { friendlyError, safe } from './safe';
 import { camelToWords } from './format';
+import { sfx } from './audio';
+import { inductHallOfFame, recordGameOver } from './records';
 
 // ---------------------------------------------------------------------------------------------
 // Screens
@@ -18,8 +20,8 @@ import { camelToWords } from './format';
 
 export type ScreenName =
   | 'menu' | 'newgame' | 'load' | 'upgrades' | 'achievements' | 'halloffame' | 'settings' | 'codex' | 'transfer'
-  | 'hub' | 'ludus' | 'dino' | 'breeding' | 'market' | 'arena' | 'arenaPlay' | 'intrigue' | 'influence' | 'horde'
-  | 'estate' | 'finance' | 'objectives' | 'messages' | 'events' | 'results' | 'defeated';
+  | 'hub' | 'ludus' | 'dino' | 'breeding' | 'market' | 'arena' | 'arenaPlay' | 'intrigue' | 'rival' | 'influence' | 'horde'
+  | 'ascension' | 'estate' | 'finance' | 'objectives' | 'messages' | 'events' | 'results' | 'defeated';
 
 export interface ScreenRef {
   name: ScreenName;
@@ -60,6 +62,15 @@ export interface ActOpts<T> {
   stringIsText?: boolean;
   /** called instead of the toast when the engine throws */
   onError?: (message: string) => void;
+  /** no coin sound when the purse changes (the caller plays its own cue) */
+  quiet?: boolean;
+}
+
+export interface BattleOverlayOpts {
+  /** names of side 0 and side 1 (default: your ludus on the player's side, "Opponents" on the other) */
+  sideNames?: [string, string];
+  /** which side is the player's when the result does not say (BattleResult.playerSide wins) */
+  playerSide?: 0 | 1;
 }
 
 export interface Nav {
@@ -91,8 +102,8 @@ export interface Store {
   dismissToast: (id: number) => void;
   confirm: (o: ConfirmOpts) => Promise<boolean>;
   confirmState: { opts: ConfirmOpts; resolve: (v: boolean) => void } | null;
-  battle: { result: BattleResult; title?: string; onDone?: () => void } | null;
-  showBattle: (result: BattleResult, title?: string, onDone?: () => void) => void;
+  battle: { result: BattleResult; title?: string; onDone?: () => void; opts?: BattleOverlayOpts } | null;
+  showBattle: (result: BattleResult, title?: string, onDone?: () => void, opts?: BattleOverlayOpts) => void;
   closeBattle: () => void;
   startGame: (g: GameState, dev: boolean, stack?: ScreenRef[]) => void;
   quit: () => void;
@@ -205,7 +216,10 @@ export function StoreProvider({ init, children }: { init: StoreInit; children: R
       const def = ACHIEVEMENTS[id];
       toast(`${def?.desc ?? 'A new deed for the annals of your house.'} +${def?.amber ?? 50} Amber`, 'achievement', def?.name ?? camelToWords(id));
     }
-    if (ids.length) saveMeta(m);
+    if (ids.length) {
+      saveMeta(m);
+      sfx.achievement();
+    }
   }, [toast]);
 
   const act = useCallback(<T,>(fn: (g: GameState) => T, opts: ActOpts<T> = {}): T | undefined => {
@@ -217,6 +231,7 @@ export function StoreProvider({ init, children }: { init: StoreInit; children: R
     } catch {
       backup = null;
     }
+    const purse = g.player.ludus.denarii;
     let r: T;
     try {
       r = fn(g);
@@ -240,6 +255,7 @@ export function StoreProvider({ init, children }: { init: StoreInit; children: R
     else {
       const okText = typeof opts.ok === 'function' ? opts.ok(r) : opts.ok;
       if (okText) toast(okText, 'good');
+      if (!opts.quiet && gameRef.current && gameRef.current.player.ludus.denarii !== purse) sfx.coin();
     }
     collectAchievements();
     persist();
@@ -298,8 +314,8 @@ export function StoreProvider({ init, children }: { init: StoreInit; children: R
   }), []);
 
   const battleRef = useRef<Store['battle']>(null);
-  const showBattle = useCallback((result: BattleResult, title?: string, onDone?: () => void) => {
-    battleRef.current = { result, title, onDone };
+  const showBattle = useCallback((result: BattleResult, title?: string, onDone?: () => void, opts?: BattleOverlayOpts) => {
+    battleRef.current = { result, title, onDone, opts };
     setBattle(battleRef.current);
   }, []);
   const closeBattle = useCallback(() => {
@@ -327,7 +343,11 @@ export function StoreProvider({ init, children }: { init: StoreInit; children: R
   }, [bump, persist]);
 
   const finishWeek = useCallback((onBlocked?: (msg: string) => void) => {
-    const res = act((g) => completeWeek(g), { onError: (m) => (onBlocked ? onBlocked(m) : toast(m, 'bad')) });
+    const before = gameRef.current;
+    const levels = new Map((before?.player.ludus.creatures ?? []).map((c) => [c.id, c.level]));
+    const playedWeek = before?.world.week ?? 0;
+    sfx.newWeek();
+    const res = act((g) => completeWeek(g), { quiet: true, onError: (m) => (onBlocked ? onBlocked(m) : toast(m, 'bad')) });
     if (res === undefined) return;
     const g = gameRef.current;
     const m = metaRef.current;
@@ -340,6 +360,12 @@ export function StoreProvider({ init, children }: { init: StoreInit; children: R
       }
       m.stats.bestWeek = Math.max(m.stats.bestWeek, g.world.week);
       m.stats.bestInfluence = Math.max(m.stats.bestInfluence, g.player.ludus.influence);
+      const hof = safe(() => inductHallOfFame(g, m, playedWeek), null);
+      if (hof) toast(`${hof.name} enters the Hall of Fame with ${hof.fame} fame.`, 'good', 'Hall of Fame');
+      if (g.over) safe(() => recordGameOver(g, m), false);
+      const levelled = g.player.ludus.creatures.some((c) => c.level > (levels.get(c.id) ?? c.level));
+      if (levelled && !g.over) window.setTimeout(() => sfx.levelUp(), 900);
+      saveGame(g);
     }
     saveMeta(m);
     setStack(g?.over ? [{ name: 'defeated' }] : [{ name: 'hub' }, { name: 'results' }]);
