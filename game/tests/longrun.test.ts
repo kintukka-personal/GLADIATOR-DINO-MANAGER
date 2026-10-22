@@ -138,7 +138,7 @@ function bot(state: GameState): void {
     if (ok.length >= t.perTeam) {
       const fit = ok.filter((c) => !c.injury && c.loyalty > 40);
       if (fit.length < t.perTeam) continue;
-      for (const c of fit) c.instruction = 'care';
+      for (const c of fit) c.instruction = process.env.JL_INSTR ? process.env.JL_INSTR as Creature['instruction'] : 'default';
       const team = fit.slice(0, t.perTeam).map((c) => c.id);
       if (!register(state, t.id, [team])) break;
     }
@@ -160,6 +160,7 @@ function playWeek(state: GameState): void {
         const fs = pm.result.fighters.map((f) => `${f.name}(${f.species.slice(0, 5)} hp${f.hpMax} ${f.weapon ?? '-'} ${f.armor ?? '-'})`);
         console.log(`   M w${state.world.week} ${t.name} ${pm.won ? 'WON' : 'lost'} ${pm.result.decidedBy}: ${fs.join(' vs ')}`);
       }
+      if (process.env.JL_LOG && state.world.week <= Number(process.env.JL_LOG)) for (const l of pm.result.log) console.log(`      ${l.text}`);
       if (t.status === 'bonus') continueBonus(state, t, false);
     }
   }
