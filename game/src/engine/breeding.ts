@@ -444,8 +444,8 @@ export function breedingWeek(state: GameState, h: Ludus): BreedingWeekResult {
   const before = h.eggs.length;
   h.eggs = h.eggs.filter((e) => e.fertilized || state.world.week - e.laidWeek < 8);
   if (h.isPlayer && h.eggs.length < before) res.lines.push(`${before - h.eggs.length} unfertilized egg(s) spoiled.`);
-  // cooldowns
-  for (const c of h.creatures) if (c.mateCooldown > 0) c.mateCooldown--;
+  // cooldowns (ARK: the mating interval only starts once the baby is born)
+  for (const c of h.creatures) if (c.mateCooldown > 0 && !c.pregnancy) c.mateCooldown--;
   return res;
 }
 
@@ -535,7 +535,7 @@ export function consumeFood(state: GameState, h: Ludus, food: FoodId): boolean {
 export function rollImprintRequest(c: Creature): ImprintRequest {
   const r = random();
   if (r < 0.4) return { kind: 'cuddle', done: false };
-  if (r < 0.65) return { kind: 'walk', done: false };
+  if (r < 0.65) return { kind: c.injury || c.ill > 0 ? 'cuddle' : 'walk', done: false };
   const herb = SPECIES[c.species].diet === 'herb';
   const k = random();
   let food: FoodId;
@@ -556,7 +556,7 @@ export function fulfillImprint(state: GameState, creatureId: ID): string | null 
   if (!c) return 'Creature not found.';
   const req = c.imprintRequest;
   if (!req || req.done) return 'No care request right now.';
-  if (req.kind === 'walk' && (c.injury || c.ill > 0)) return `${c.name} is too unwell to walk.`;
+  // an injured or sick baby that asked for a walk is carried around the yard instead (no imprint lost)
   if (req.kind === 'feed' && req.food) {
     if ((h.pantry[req.food] ?? 0) <= 0) return `You need ${FOODS[req.food].name} in the pantry.`;
     h.pantry[req.food] = (h.pantry[req.food] ?? 0) - 1;

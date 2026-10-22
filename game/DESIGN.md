@@ -170,7 +170,8 @@ compressed into weeks.
     at laying.
   - **Live-bearers** (mammal beasts): the female becomes **pregnant** for the species' gestation weeks and
     cannot fight. Then she gives birth.
-- Female **mating cooldown** = species `mateCooldown` weeks (Fertile trait halves it). Males: none.
+- Female **mating cooldown** = species `mateCooldown` weeks (Fertile trait halves it). Males: none. For
+  live-bearers the cooldown only counts down after the birth (ARK's mating interval).
 - The pair stays assigned until removed; each eligible week produces another egg.
 - **Unfertilized eggs**: an adult female not in a pair lays an unfertilized egg with 25% chance per week
   (ARK egg-laying). Used for kibble (§4.7) or sold (small 10, medium 25, large 60, xlarge 150).
