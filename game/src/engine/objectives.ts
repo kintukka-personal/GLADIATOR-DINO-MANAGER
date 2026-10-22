@@ -179,7 +179,9 @@ const RULES: Record<ObjectiveId, Rule> = {
   organize: {
     goal: 2, dur: 25, window: [50, 400],
     spawn: (s) => me(s).influence >= 150,
-    progress: (s, o) => (flag(o, 'organized') ? 1 : 0) + (flag(o, 'wonOwn') ? 1 : 0),
+    // tournaments.ts counts player.organized and counters.organizedWon; events are honoured too
+    progress: (s, o) => (flag(o, 'organized') || s.player.organized > ((o.data?.organized as number | undefined) ?? Infinity) ? 1 : 0)
+      + (flag(o, 'wonOwn') || (s.player.counters.organizedWon ?? 0) > ((o.data?.organizedWon as number | undefined) ?? Infinity) ? 1 : 0),
     pay: (s) => { cash(s, 100); inf(s, 10); },
   },
   thievery: {
@@ -315,8 +317,11 @@ export function seedObjectives(state: GameState): void {
   evaluate(state);
 }
 
-/** Weekly + on-action progress checks; spawns objectives whose window opens. */
+/** Weekly + on-action progress checks; spawns objectives whose window opens. Runs once per resolved week. */
 export function checkObjectives(state: GameState): void {
+  // being called at all means the week was advanced (Getting started 5/6)
+  const c = state.player.counters;
+  c['ev:advanced'] = (c['ev:advanced'] ?? 0) + 1;
   spawnPass(state, true);
   evaluate(state);
 }
@@ -330,7 +335,10 @@ function spawnPass(state: GameState, roll: boolean): void {
     if (state.player.objectives.some((o) => o.id === id)) continue;
     if (!r.spawn(state)) continue;
     if (r.chance !== undefined && (!roll || !chance(r.chance))) continue;
-    spawnObjective(state, id, { opps: state.player.opportunities.length, keepers: keeperCount(me(state)) });
+    spawnObjective(state, id, {
+      opps: state.player.opportunities.length, keepers: keeperCount(me(state)), organized: state.player.organized,
+      organizedWon: state.player.counters.organizedWon ?? 0,
+    });
   }
 }
 

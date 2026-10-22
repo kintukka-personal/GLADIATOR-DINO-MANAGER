@@ -1465,7 +1465,7 @@ export function storyHook(state: GameState, hook: string, data: Record<string, u
   const d = data as Record<string, any>;
   switch (hook) {
     case 'registered':
-      storyCheck(state);
+      objectiveEvent(state, 'registered'); // also runs storyCheck (Solonius' offer)
       break;
     case 'matchResult': {
       if (prog(state, 'soloniusThrow') !== 2) break;

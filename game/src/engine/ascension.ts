@@ -521,13 +521,15 @@ export function ascensionTurnEffects(state: GameState): void {
 // Requirements, gauntlet, victory
 // ---------------------------------------------------------------------------
 
-/** GM hasAscensionRequirements: trophies (+senator) ≥ 4 (5 at Mars), horde defeated, shrine. */
-export function ascensionProgress(state: GameState): { trophies: number; needed: number; hordeDefeated: boolean; shrine: boolean; ready: boolean } {
+/**
+ * GM hasAscensionRequirements: trophies (+senator) ≥ 4 (5 at Mars), horde defeated, shrine; `ready` adds the
+ * timing rule (every even week before the first ascension of the run, then every 50th week).
+ */
+export function ascensionProgress(state: GameState, week = state.world.week): { trophies: number; needed: number; hordeDefeated: boolean; shrine: boolean; ready: boolean } {
   const trophies = firstPlaces(me(state)) + (state.player.senator ? 1 : 0);
   const needed = asc(state, ASC.mars) ? 5 : 4;
   const hordeDefeated = !!state.world.horde.defeated;
   const shrine = (me(state).buildings.shrine ?? 0) > 0;
-  const week = state.world.week;
   const timing = state.ascended ? week % 50 === 0 : week % 2 === 0;
   return { trophies, needed, hordeDefeated, shrine, ready: trophies >= needed && hordeDefeated && shrine && timing };
 }
@@ -603,8 +605,19 @@ export function onAscensionVictory(state: GameState, champion: Creature, meta: M
   for (const id of ids) unlockAchievement(state, id);
 }
 
-/** Apply run results that need the account (prophecy level). Call when saving the run's meta. */
+/**
+ * Apply run results that need the account. Call after every resolved week (and before saving the meta):
+ *  - an Ascension tournament cleared by the player (tournaments.ts sets flags.ascensionChampion) is recorded
+ *    through onAscensionVictory once per champion;
+ *  - a won Prophecy (flags.prophecyWon) raises the account's prophecy level.
+ */
 export function syncAscensionMeta(state: GameState, meta: Meta): void {
+  const champId = state.world.flags.ascensionChampion;
+  if (champId && champId !== state.world.flags.ascensionRecorded) {
+    const champ = me(state).creatures.find((c) => c.id === champId);
+    if (champ) onAscensionVictory(state, champ, meta);
+    state.world.flags.ascensionRecorded = champId;
+  }
   if (state.world.difficulty.sandbox) return;
   const key = difficultyKey(state);
   const won = Number(state.world.flags.prophecyWon ?? 0);

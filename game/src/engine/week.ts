@@ -9,7 +9,7 @@ import type { Creature, GameState, Ludus, ResultCard } from './types';
 import { SPECIES } from './data/species';
 import { chance, getSeed } from './rng';
 import { activeRivals, message, report, asc, ASC, getIdCounter } from './util';
-import { eqAge, hasTrait } from './creature';
+import { eqAge, hasTrait, addTrait } from './creature';
 import { economyWeek } from './economy';
 import { loyaltyWeek, resolveBreakouts, gearHappinessWeek } from './loyalty';
 import { trainingWeek, chooseDoctore } from './training';
@@ -57,6 +57,7 @@ export function houseWeek(state: GameState, h: Ludus): ResultCard | null {
     }
   }
   // loyaltyWeek always applies the weekly tameness change; it suppresses breakouts itself when betrayals are off
+  darkFangsWeek(state, h);
   const rebels = loyaltyWeek(state, h);
   trainingWeek(state, h);
   // breeding
@@ -74,6 +75,26 @@ export function houseWeek(state: GameState, h: Ludus): ResultCard | null {
   }
   if (rebels.length && !h.defeated) return resolveBreakouts(state, h, rebels);
   return null;
+}
+
+/** GM Dark Blade lifecycle: hunger rises one stage a week; when Starving it may drain its wielder. */
+function darkFangsWeek(state: GameState, h: Ludus): void {
+  for (const g of h.armory) {
+    if (g.unique !== 'darkFangs') continue;
+    const wielder = h.creatures.find((c) => c.gear.weapon === g.id || c.gear.offhand === g.id);
+    if (!wielder) continue;
+    const stage = g.state ?? 2;
+    if (stage < 4) {
+      g.state = stage + 1;
+      continue;
+    }
+    if (chance(0.5)) {
+      if (!hasTrait(wielder, 'Anemic')) addTrait(wielder, 'Anemic');
+      else if (!hasTrait(wielder, 'Bloodstarved')) addTrait(wielder, 'Bloodstarved');
+      else wielder.injury = { type: 'severe', weeks: Math.max(wielder.injury?.weeks ?? 0, 4) };
+      if (h.isPlayer) report(state, 'bad', `The starving Dark Fangs drained ${wielder.name}'s life force.`);
+    }
+  }
 }
 
 function resetWeekFlags(state: GameState): void {

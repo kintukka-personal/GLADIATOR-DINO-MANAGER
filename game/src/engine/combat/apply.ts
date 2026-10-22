@@ -206,7 +206,7 @@ export function applyBattleResult(ctx: ApplyContext, sides: [BattleSide, BattleS
     if (playerSides.length) {
       state.runStats.battles += 1;
       if (playerSides.length === 1 && playerSides[0] === result.winner) state.runStats.wins += 1;
-      state.runStats.deaths += dead.filter((d) => sides[d.side].player).length;
+      // deaths are counted by care.bury
     }
   }
 

@@ -439,7 +439,11 @@ export function makeCreature(init: CreatureInit): Creature {
     inactive: false, rewardCooldown: 0, rebellionGrace: false, speciesLevel: 0, reincarnation: 0, happiness: 0,
     lastGearWorth: 0, mateCooldown: 0, offspring: 0, legend: init.legend, price: init.price,
   };
-  for (const t of sp.innateTraits ?? []) addTrait(c, t);
+  for (const t of sp.innateTraits ?? []) {
+    addTrait(c, t);
+    // beast and mythic stat lines already include their innate traits (GM numbers)
+    if (sp.kind === 'beast') for (const s of STATS) c.bonus[s] -= TRAITS[t]?.stats[s] ?? 0;
+  }
   for (const t of init.traits ?? []) addTrait(c, t);
   if (sp.kind === 'beast') {
     c.treats = 0;
@@ -609,7 +613,11 @@ export function makeNamed(species: SpeciesId, name: string, stats: Stats, o: Par
     c.level = o.level;
     c.xp = xpForLevel(o.level);
   }
-  for (const [t, r] of o.techniques ?? []) c.techniques.push({ id: t, rank: r, equipped: true });
+  for (const [t, r] of o.techniques ?? []) {
+    const k = c.techniques.find((x) => x.id === t);
+    if (k) k.rank = Math.max(k.rank, r);
+    else c.techniques.push({ id: t, rank: r, equipped: true });
+  }
   if (o.cls) {
     c.cls = o.cls;
     c.classXp = 4;

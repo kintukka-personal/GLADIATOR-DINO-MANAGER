@@ -167,7 +167,7 @@ export const QUEST_EVENTS: EventDef[] = [
       if (id === 'threaten') return { text: `The scholar remembers that the Princeps can have him exiled. ${done()}` };
       const c = stillOrChampion(s, d.data.champ);
       if (!c) return { text: 'Nobody is fit to fight.' };
-      const foe = dinoFoe(s, 'giganotosaurus', "The Scholar's Bodyguard", { mult: 0.9, gear: [L('tailClub', 2)] });
+      const foe = dinoFoe(s, 'allosaurus', "The Scholar's Bodyguard", { mult: 1.15, cls: 'brute', traits: ['Giant'], gear: [L('tailClub', 2), L('studdedBarding', 1)] });
       const f = streetFight(s, { title: 'The scholar\'s bodyguard', fighters: [c], foes: [foe], foeName: 'the bodyguard', stake: 0 });
       return { text: f.won ? `With his bodyguard in pieces, the scholar is suddenly eager to help. ${done()} ${f.text}` : `The bodyguard was as large as promised. ${f.text}`, battle: f.battle };
     },

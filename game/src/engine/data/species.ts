@@ -183,7 +183,7 @@ export const SPECIES: Record<SpeciesId, SpeciesDef> = {
   lesserhydra: mythic('lesserhydra', 'Lesser Hydra', 'hydra', S(40, 14, 10, 300), ['Bite', 'Maul'], ['ManyHeads', 'Mythical', 'Impact']),
   wraith: mythic('wraith', 'Wraith', 'wraith', S(80, 70, 60, 450), ['Rally', 'Warcry', 'Thunderstrike'], ['Mythical', 'Intangible', 'Impact', 'FeralIntelligence', 'Tough', 'Devotion']),
   wyvern: mythic('wyvern', 'Wyvern', 'wyvern', S(12, 22, 10, 75), ['Hurricane', 'Bite', 'Fireball'], ['Mythical', 'Flying', 'FeralIntelligence']),
-  mandrake: mythic('mandrake', 'Mandrake', 'mandrake', S(14, 18, 8, 30), ['Bite'], ['PoisonedClaws', 'LightningSpeed', 'Tough']),
+  mandrake: mythic('mandrake', 'Mandrake', 'mandrake', S(14, 18, 8, 30), ['Bite'], ['PoisonedClaws', 'LightningSpeed', 'Tough'], 'S'),
 };
 
 function beast(
@@ -204,9 +204,9 @@ function beast(
   };
 }
 
-function mythic(id: BeastSpeciesId, name: string, body: SpeciesDef['body'], gm: Stats, natural: SpeciesDef['natural'], innateTraits: SpeciesDef['innateTraits']): SpeciesDef {
+function mythic(id: BeastSpeciesId, name: string, body: SpeciesDef['body'], gm: Stats, natural: SpeciesDef['natural'], innateTraits: SpeciesDef['innateTraits'], size?: SpeciesDef['size']): SpeciesDef {
   return {
-    id, name, kind: 'beast', body, size: gm.hp >= 200 ? 'H' : 'L', base: gm, weights: S(1, 1, 1, 1),
+    id, name, kind: 'beast', body, size: size ?? (gm.hp >= 200 ? 'H' : 'L'), base: gm, weights: S(1, 1, 1, 1),
     diet: 'carn', repro: 'none', eggSize: 'mythic', incubWeeks: 0, tempRange: [20, 40], gestationWeeks: 0,
     matureWeeks: 20, mateCooldown: 99, kibble: 'extraordinary', basicBonus: 'Mythical', advancedBonus: '–',
     natural, innateTraits, palette: [[2, 3, 37, 29], [4, 5], [0, 37], [15, 36, 38], [1, 37], [15, 36, 18]],

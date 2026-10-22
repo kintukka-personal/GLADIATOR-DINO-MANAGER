@@ -175,6 +175,20 @@ describe('victory and meta', () => {
     expect(m2.champions.normal).toBeUndefined();
   });
 
+  it('syncAscensionMeta records a victory flagged by the tournament once', () => {
+    const s = makeState({ ascension: 2 });
+    const meta = emptyMetaForTest();
+    const [c] = addTo(s.player.ludus, dino('Flamma', { fame: 300 }));
+    s.ascended = true;
+    s.world.flags.ascensionChampion = c.id;
+    syncAscensionMeta(s, meta);
+    expect(meta.ascension.normal).toBe(3);
+    expect(meta.champions.normal?.creature.id).toBe(c.id);
+    meta.ascension.normal = 0;
+    syncAscensionMeta(s, meta);
+    expect(meta.ascension.normal).toBe(0);
+  });
+
   it('prophecy unlocks one extra selectable level', () => {
     const s = makeState({ ascension: 3 });
     const meta = emptyMetaForTest();
