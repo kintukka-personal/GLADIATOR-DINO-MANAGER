@@ -127,7 +127,7 @@ export function beginAdvance(state: GameState): void {
 export function completeWeek(state: GameState): ResultCard[] {
   const lines = finishTournaments(state);
   state.results = [];
-  state.report = [];
+  // keep report lines written during the management phase (decisions, intrigue) for this week's report
   for (const l of lines) report(state, 'info', l);
   resolveWeek(state);
   return state.results;

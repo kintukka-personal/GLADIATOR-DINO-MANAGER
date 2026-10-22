@@ -287,7 +287,9 @@ export function eventsForWeek(state: GameState, week: number, live = false): Tou
   }
   if (w.flags.prophecyWeek === week) out.push(template('prophecy', week));
   if (w.flags.troyWeek === week) out.push(template('troy', week));
-  if (w.flags.poseidonWeek === week) out.push(template('poseidon', week));
+  // decision events (events.ts "Bread and games"): the player hosts; as Princeps it becomes Poseidon's blessing
+  if (w.flags.poseidonWeek === week) out.push(template('poseidon', week, { organizerId: state.player.ludus.id }));
+  if (w.flags.breadGamesWeek === week) out.push(template('breadGames', week, { organizerId: state.player.ludus.id }));
   return out;
 }
 
@@ -813,6 +815,16 @@ function bathHouseFighter(h: Ludus, cs: Creature[]): ID | undefined {
 }
 
 function instructionsFor(
+  state: GameState, t: Tournament, e: Entry, cs: Creature[],
+  o: { live: boolean; vsPlayer: boolean; odds: number; prep?: MatchPrep; bonusK: number; enemyHouseId: ID },
+): Record<ID, Instruction | null> {
+  const out = instructionsBase(state, t, e, cs, o);
+  // GM checkGladiatorSpies: a dino secretly working for the other side throws the fight
+  for (const c of cs) if (c.spyFor && c.spyFor === o.enemyHouseId) out[c.id] = 'throw';
+  return out;
+}
+
+function instructionsBase(
   state: GameState, t: Tournament, e: Entry, cs: Creature[], o: { live: boolean; vsPlayer: boolean; odds: number; prep?: MatchPrep; bonusK: number },
 ): Record<ID, Instruction | null> {
   const out: Record<ID, Instruction | null> = {};
@@ -876,8 +888,8 @@ function fight(state: GameState, t: Tournament, m: MatchRecord, live: boolean, p
     const h1 = prepHouse(state, e1);
     const riders0 = ridersFor(t, m.round);
     const riders1 = bonusK ? foeRiders(t, bonusK) || riders0 : riders0;
-    ins0 = instructionsFor(state, t, e0, c0, { live, vsPlayer, odds, prep, bonusK });
-    const ins1 = instructionsFor(state, t, e1, c1, { live, vsPlayer, odds, prep, bonusK });
+    ins0 = instructionsFor(state, t, e0, c0, { live, vsPlayer, odds, prep, bonusK, enemyHouseId: e1.houseId });
+    const ins1 = instructionsFor(state, t, e1, c1, { live, vsPlayer, odds, prep, bonusK, enemyHouseId: e0.houseId });
     // cheats
     let aiCheat = vsPlayer ? aiCheatFor(state, t, m, rival, c1, c0) : null;
     if (live && vsPlayer && prep?.bribe && cheatAvailable(state, t, prep.bribe, c0.length, c1.length) === null) {

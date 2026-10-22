@@ -400,6 +400,21 @@ describe('playing a tournament', () => {
     expect(bat.influence - before.i).toBeGreaterThanOrEqual(1);
   });
 
+  it('a turned spy throws the fight against the house it spies for', () => {
+    const s = makeState();
+    const bat = s.rivals.find((r) => r.ai?.key === 'batiatus')!;
+    scheduleOrganized(s, bat, { perTeam: 1, teams: 2, week: 7, beasts: false, mounts: false });
+    goToWeek(s, 7);
+    const t = s.world.tournaments.find((x) => x.organizerId === bat.id)!;
+    const mole = dino(s, 'Judas');
+    mole.spyFor = bat.id;
+    register(s, t.id, [[mole.id]]);
+    startTournaments(s);
+    playMatch(s, t, { instructions: { [mole.id]: 'kill' } });
+    const sd = ctl.sides[ctl.sides.length - 1] as any[];
+    expect(sd[0].fighters[0].instruction).toBe('throw');
+  });
+
   it('a lone dino beating a team of three earns One-Dino Army', () => {
     const s = makeState();
     const bat = s.rivals.find((r) => r.ai?.key === 'batiatus')!;
@@ -632,6 +647,26 @@ describe('prizes, Legends and special events', () => {
     expect(t.spectators).toBeGreaterThan(0);
     expect(s.player.ludus.denarii - d1).toBeGreaterThanOrEqual(200 + 100);
     expect(s.pendingAchievements).toContain('organizer');
+  });
+
+  it('schedules Bread and Games / Poseidon\'s Blessing from event flags, hosted by the player', () => {
+    const s = makeState();
+    s.world.flags.breadGamesWeek = 7;
+    s.world.flags.poseidonWeek = 9;
+    expect(upcoming(s, 10).some((d) => d.key === 'breadGames' && d.week === 7)).toBe(true);
+    goToWeek(s, 7);
+    const bread = byKey(s, 'breadGames');
+    expect(bread).toMatchObject({ perTeam: 2, teams: 8, type: 'normal', organizerId: s.player.ludus.id });
+    goToWeek(s, 9);
+    const pos = byKey(s, 'poseidon');
+    expect(pos).toMatchObject({ perTeam: 2, teams: 8, type: 'poseidon', organizerId: s.player.ludus.id });
+    const a = dino(s, 'Neptunus', 9, { str: 25, agi: 25, cun: 25, hp: 100 });
+    const b = dino(s, 'Triton', 9, { str: 25, agi: 25, cun: 25, hp: 100 });
+    register(s, pos.id, [[a.id, b.id]]);
+    startTournaments(s);
+    ctl.playerWins = true;
+    playAll(s, pos);
+    expect(s.player.ludus.armory.some((g) => g.unique === 'poseidonsTrident')).toBe(true);
   });
 
   it('the Ascension replaces the pits when ready; a full clear sets state.ascended', () => {

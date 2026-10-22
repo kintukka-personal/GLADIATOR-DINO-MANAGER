@@ -1,6 +1,5 @@
 // What needs the player's attention this week (hub list + badges). Stub-safe.
 import type { GameState, StoryConversation } from '../../engine/types';
-import { activeConversation } from '../../engine/stories';
 import { pendingAdventures, type AdventureResolution } from '../../engine/adventures';
 import { safe } from '../safe';
 import { eggAtRisk } from '../format';
@@ -25,7 +24,8 @@ export function attention(g: GameState): Attention {
   const me = p.ludus;
   return {
     decisions: p.decisions.length,
-    conversation: safe(() => activeConversation(g), p.conversations[0] ?? null),
+    // pure read: activeConversation() prunes/triggers stories, so the hub calls it inside an action
+    conversation: p.conversations[0] ?? null,
     defenses: p.defenses.length,
     adventures: safe(() => pendingAdventures(g), [] as AdventureResolution[]),
     care: me.creatures.filter((c) => c.imprintRequest && !c.imprintRequest.done).length,

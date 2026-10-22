@@ -5,7 +5,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { AchievementId, BattleResult, GameState, Meta, Settings } from '../engine/types';
 import { saveGame, saveMeta, serialize, deserialize } from '../engine/save';
-import { ACHIEVEMENTS } from '../engine/achievements';
+import { ACHIEVEMENTS, grantAchievements } from '../engine/achievements';
+import { syncAscensionMeta } from '../engine/ascension';
 import { beginAdvance, completeWeek } from '../engine/week';
 import { attendedTournament } from '../engine/tournaments';
 import { friendlyError, safe } from './safe';
@@ -182,21 +183,29 @@ export function StoreProvider({ init, children }: { init: StoreInit; children: R
     saveMeta(metaRef.current);
   }, [toast]);
 
-  /** Move state.pendingAchievements into the account meta and award Amber. */
+  /** Move state.pendingAchievements into the account meta (engine grantAchievements pays Amber once). */
   const collectAchievements = useCallback(() => {
     const g = gameRef.current;
     if (!g || !g.pendingAchievements?.length) return;
-    const ids: AchievementId[] = g.pendingAchievements.splice(0);
-    if (g.world.difficulty.sandbox) return; // achievements are disabled in Sandbox
     const m = metaRef.current;
-    for (const id of ids) {
-      if (m.achievements.includes(id)) continue;
-      m.achievements.push(id);
-      const def = ACHIEVEMENTS[id];
-      const amber = def?.amber ?? 50;
-      m.amber += amber;
-      toast(`${def?.desc ?? 'A new deed for the annals of your house.'} +${amber} Amber`, 'achievement', def?.name ?? camelToWords(id));
+    let ids: AchievementId[];
+    try {
+      ids = grantAchievements(m, g);
+    } catch {
+      // fallback while the catalogue is unavailable: 50 Amber each, never twice
+      ids = [];
+      for (const id of g.pendingAchievements.splice(0)) {
+        if (g.world.difficulty.sandbox || m.achievements.includes(id)) continue;
+        m.achievements.push(id);
+        m.amber += 50;
+        ids.push(id);
+      }
     }
+    for (const id of ids) {
+      const def = ACHIEVEMENTS[id];
+      toast(`${def?.desc ?? 'A new deed for the annals of your house.'} +${def?.amber ?? 50} Amber`, 'achievement', def?.name ?? camelToWords(id));
+    }
+    if (ids.length) saveMeta(m);
   }, [toast]);
 
   const act = useCallback(<T,>(fn: (g: GameState) => T, opts: ActOpts<T> = {}): T | undefined => {
@@ -249,7 +258,7 @@ export function StoreProvider({ init, children }: { init: StoreInit; children: R
         toast('That is not possible right now.', 'bad');
         return false;
       }
-      if (gameRef.current) gameRef.current.unlocks = [...metaRef.current.upgrades];
+      if (gameRef.current) gameRef.current.unlocks = [...new Set([...(gameRef.current.unlocks ?? []), ...metaRef.current.upgrades])];
       if (ok) toast(ok, 'good');
       persist();
       bump();
@@ -324,6 +333,11 @@ export function StoreProvider({ init, children }: { init: StoreInit; children: R
     const m = metaRef.current;
     m.stats.weeksPlayed += 1;
     if (g) {
+      try {
+        syncAscensionMeta(g, m);
+      } catch {
+        /* ascension bookkeeping unavailable */
+      }
       m.stats.bestWeek = Math.max(m.stats.bestWeek, g.world.week);
       m.stats.bestInfluence = Math.max(m.stats.bestInfluence, g.player.ludus.influence);
     }

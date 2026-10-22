@@ -932,7 +932,7 @@ export function rivalBids(state: GameState): void {
 // Defeat, refill, Theokoles
 // ---------------------------------------------------------------------------
 
-/** Remove defeated houses, herald messages, Crassus replacement, refill to 4 rivals every 6 weeks, Theokoles. */
+/** Remove defeated houses, herald messages, Crassus replacement, refill to 4 rivals every 6 weeks. */
 export function cleanupRivals(state: GameState): void {
   const week = state.world.week;
   const destroyed = state.rivals.filter((r) => r.defeated);
@@ -952,38 +952,7 @@ export function cleanupRivals(state: GameState): void {
     spawnRival(state, 'crassus', { announce: true });
   }
   if (week % 6 === 0 && state.rivals.length < 4) spawnRival(state, 'random');
-  // Theokoles (GM 03 §5.6) is rolled by horde.ts timelineWeek; theokolesCheck below is the same rule and shares
-  // the flag, kept for callers that prefer this module. Wiring both would double the weekly chance.
-}
-
-/** GM 03 §5.6: Theokoles joins the strongest rival, or appears in the market. Once per run. */
-export function theokolesCheck(state: GameState): void {
-  const w = state.world;
-  if (w.flags.theokoles) return;
-  const week = w.week;
-  let t = asc(state, ASC.vulcan) ? 10 : 20;
-  if (w.difficulty.hard) t = 0;
-  if (w.difficulty.nightmare) t = -5;
-  if (w.ascension > 4) t -= 10;
-  const r = strongestRival(state);
-  if (!r) return;
-  const me = state.player.ludus;
-  if (week > t + 30 && r.influence < me.influence && chance(0.2)) {
-    const c = makeLegend(state, 'theokoles');
-    c.price = undefined;
-    r.creatures.push(c);
-    r.denarii = Math.floor(r.denarii / 2);
-    w.flags.theokoles = 'rival';
-    message(state, 'herald', 'Theokoles', `${r.name} has emptied half his coffers for Theokoles, the pale tyrant who has never lost. The undertakers of Capua are hiring.`);
-  } else if (week + t > 50 && r.influence > me.influence && chance(0.2)) {
-    const c = makeLegend(state, 'theokoles');
-    c.price = 800;
-    w.market.creatures.push(c);
-    w.flags.theokoles = 'market';
-    if (me.spiesLastWeek > 0 || me.keepers.spies > 0) {
-      message(state, 'spy', 'A shadow in the market', 'Our spies report a pale Tyrannosaurus in the slave market, scarred and enormous. They call him Theokoles. 800 denarii, if you dare.');
-    }
-  }
+  // Theokoles (GM 03 §5.6) is rolled by horde.ts timelineWeek (world.flags.theokoles).
 }
 
 /** Gear for the AI that are part of a named rival's starting kit (exposed for the UI). */

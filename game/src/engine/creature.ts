@@ -391,20 +391,14 @@ export function randomColors(species: SpeciesId): number[] {
   return pal.map((region) => (chance(0.02) ? rand(COLORS.length) : pick(region)));
 }
 
-const usedNames = new Set<string>();
-export function randomName(species: SpeciesId, sex: Sex): string {
+/** Random name for a species; avoids names in `taken` when given (no hidden global state, so runs stay reproducible). */
+export function randomName(species: SpeciesId, sex: Sex, taken?: Set<string>): string {
   const pool = namePool(species, sex === 'F');
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 8; i++) {
     const n = pick(pool);
-    if (!usedNames.has(n)) {
-      usedNames.add(n);
-      if (usedNames.size > 400) usedNames.clear();
-      return n;
-    }
+    if (!taken || !taken.has(n)) return n;
   }
-  const n = pick(pool);
-  const suffix = pick(['II', 'III', 'Minor', 'the Younger', 'IV']);
-  return `${n} ${suffix}`;
+  return `${pick(pool)} ${pick(['II', 'III', 'Minor', 'the Younger', 'IV'])}`;
 }
 
 export interface CreatureInit {

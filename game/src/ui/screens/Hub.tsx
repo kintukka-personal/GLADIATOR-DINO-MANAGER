@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { BattleResult, Decision, GameState, PendingDefense, StoryConversation } from '../../engine/types';
 import { seasonName } from '../../engine/breeding';
-import { answerConversation } from '../../engine/stories';
+import { activeConversation, answerConversation } from '../../engine/stories';
 import { resolveDecision } from '../../engine/events';
 import { resolveDefense, DEFENSE_PROMPTS } from '../../engine/intrigue';
 import { resolveAdventure, type AdventureResolution } from '../../engine/adventures';
@@ -130,7 +130,9 @@ function ConversationSheet({ conv, onClose }: { conv: StoryConversation; onClose
   const store = useStore();
   const g = store.game!;
   const reduce = useReducedMotion();
-  const total = conv.lines.reduce((n, l) => n + l.text.length, 0);
+  // lines with choiceDependant are the NPC's replies to a choice: never show them before answering
+  const lines = conv.lines.filter((l) => l.choiceDependant === undefined);
+  const total = lines.reduce((n, l) => n + l.text.length, 0);
   const [chars, setChars] = useState(reduce ? total : 0);
   const [result, setResult] = useState<{ text: string; battle?: BattleResult } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -162,7 +164,7 @@ function ConversationSheet({ conv, onClose }: { conv: StoryConversation; onClose
       ) : undefined}
     >
       <div className="chat" aria-live="polite">
-        {conv.lines.map((l, i) => {
+        {lines.map((l, i) => {
           if (budget <= 0) return null;
           const shown = l.text.slice(0, budget);
           const typing = budget < l.text.length;
@@ -190,7 +192,12 @@ function ConversationSheet({ conv, onClose }: { conv: StoryConversation; onClose
             ))}
           </div>
         )}
-        {result && <div className="chat-line narrator"><div className="chat-bubble">{result.text}</div></div>}
+        {result && (
+          <div className="chat-line">
+            <Portrait actor={conv.actor} female={g.player.female} size={40} />
+            <div className="chat-bubble"><div className="chat-who">{ACTOR_NAME[conv.actor] ?? conv.data?.speaker ?? ''}</div>{result.text}</div>
+          </div>
+        )}
         <div ref={endRef} />
       </div>
     </Sheet>
@@ -319,11 +326,19 @@ export function HubScreen() {
   const [dec, setDec] = useState<Decision | null>(null);
   const [def, setDef] = useState<PendingDefense | null>(null);
   const [adv, setAdv] = useState<AdventureResolution | null>(null);
+  const [ready, setReady] = useState<StoryConversation | null | undefined>(undefined);
+  useEffect(() => {
+    // activeConversation() may prune expired conversations or trigger a story: run it as an action
+    const c = store.act((s) => activeConversation(s), { onError: () => undefined });
+    setReady(c === undefined ? undefined : c);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [g.world.week]);
+  const readyConv = ready === undefined ? a.conversation : ready && g.player.conversations.some((c) => c.id === ready.id) ? ready : null;
   const star = useMemo(() => [...me.creatures].filter((c) => c.maturity >= 1 && c.kind === 'dino').sort((x, y) => y.fame - x.fame)[0] ?? null, [me.creatures, store.v]);
   const adults = me.creatures.filter((c) => c.maturity >= 1).length;
 
   const rows: AttnRow[] = [];
-  if (a.conversation) rows.push({ id: 'attn-conversation', icon: 'scroll', tone: 'amber', title: `${ACTOR_NAME[a.conversation.actor] ?? 'Someone'} wants a word`, sub: a.conversation.title, onClick: () => setConv(a.conversation) });
+  if (readyConv) rows.push({ id: 'attn-conversation', icon: 'scroll', tone: 'amber', title: `${ACTOR_NAME[readyConv.actor] ?? readyConv.data?.speaker ?? 'Someone'} wants a word`, sub: readyConv.title, onClick: () => setConv(readyConv) });
   if (a.decisions) rows.push({ id: 'attn-decision', icon: 'bell', tone: 'amber', title: g.player.decisions[0].title, sub: a.decisions > 1 ? `${a.decisions} decisions waiting` : 'A decision awaits you', onClick: () => setDec(g.player.decisions[0]) });
   if (a.defenses) {
     const d = g.player.defenses[0];

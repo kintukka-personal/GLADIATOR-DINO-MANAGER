@@ -285,7 +285,7 @@ export function offspringOf(state: GameState, id: ID): Creature[] {
 export function makeNewborn(state: GameState, h: Ludus, species: SpeciesId, genes: Genetics, sex: Sex, inherited: TraitId[]): Creature {
   const c = makeCreature({ species, sex, genes, maturity: 0, adultWeeks: 0 });
   c.genes = { ...genes };
-  c.name = randomName(species, sex);
+  c.name = randomName(species, sex, new Set(h.creatures.map((x) => x.name)));
   c.ageWeeks = 0;
   c.loyalty = 70;
   c.bornWeek = state.world.week;

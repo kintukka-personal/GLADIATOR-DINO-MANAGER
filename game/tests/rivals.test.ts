@@ -60,7 +60,7 @@ vi.mock('../src/engine/newgame', async () => {
 
 import {
   seedRivals, spawnRival, helpRival, rivalWeek, unknownWeek, rivalBids, opinionLabel, changeOpinion, cleanupRivals,
-  aiInstruction, makeLegend, preferenceScore, valuation, manageCreatures, theokolesCheck, buffUp,
+  aiInstruction, makeLegend, preferenceScore, valuation, manageCreatures, buffUp,
 } from '../src/engine/rivals';
 import { seedCalendar, seedWeekTournaments } from '../src/engine/tournaments';
 import { makeLudus } from '../src/engine/newgame';
@@ -313,14 +313,6 @@ describe('spawning and cleanup', () => {
     expect(t.rivals.some((r) => r.ai!.key === 'crassus')).toBe(true);
   });
 
-  it('theokolesCheck sends Theokoles to the strongest rival or the market', () => {
-    const s = makeState();
-    s.world.week = 60;
-    s.player.ludus.influence = 1000;
-    for (let i = 0; i < 100 && !s.world.flags.theokoles; i++) theokolesCheck(s);
-    expect(s.world.flags.theokoles).toBe('rival');
-    expect(s.rivals.some((r) => r.creatures.some((c) => c.legend === 'theokoles'))).toBe(true);
-  });
 });
 
 describe('the AI week', () => {
@@ -344,6 +336,7 @@ describe('the AI week', () => {
   it('runs thirty weeks for every house without breaking anything', () => {
     const s = makeState({ hard: true });
     ctl.canBuild = true;
+    let organised = 0;
     for (let w = 1; w <= 30; w++) {
       s.world.week = w;
       unknownWeek(s);
@@ -356,6 +349,7 @@ describe('the AI week', () => {
       cleanupRivals(s);
       rivalBids(s);
       seedWeekTournaments(s);
+      organised += s.world.tournaments.filter((t) => t.key === 'organized').length;
       for (const r of s.rivals) {
         expect(Number.isFinite(r.denarii)).toBe(true);
         expect(r.creatures.length).toBeLessThanOrEqual(12);
@@ -363,7 +357,7 @@ describe('the AI week', () => {
       }
     }
     expect(ctl.builds.length).toBeGreaterThan(0);
-    expect(s.world.calendar.some((d) => d.key === 'organized')).toBe(true);
+    expect(organised).toBeGreaterThan(0);
     expect(s.unknown.denarii).toBe(200);
     expect(s.unknown.armory.some((g) => g.type === 'greatTalons')).toBe(true); // Hard: Old Spatha → Great Talons at week 10
   });
