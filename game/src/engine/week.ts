@@ -70,7 +70,8 @@ export function houseWeek(state: GameState, h: Ludus): ResultCard | null {
     const names = [...b1.born, ...b2.hatched].map((c) => `${c.name} (${SPECIES[c.species].name})`);
     const ids = [...b1.born, ...b2.hatched].map((c) => c.id);
     if (names.length) state.results.push({ kind: 'hatch', names, ids, text: names.length === 1 ? 'A new hatchling joins the ludus.' : 'New hatchlings join the ludus.' });
-    if (b3.died.length) state.results.push({ kind: 'death', names: b3.died, text: 'Lost in the nursery.' });
+    const lost = [...b2.died, ...b3.died];
+    if (lost.length) state.results.push({ kind: 'death', names: lost, text: b3.died.length ? 'Lost in the nursery.' : 'Lost in the hatchery.' });
   } else {
     aiBreedingWeek(state, h);
   }
