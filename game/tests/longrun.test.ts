@@ -196,6 +196,10 @@ describe('long run', () => {
         playWeek(state);
         checkInvariants(state);
         if (process.env.JL_TRACE2 && weeks > Number(process.env.JL_FROM ?? 30)) { const rep = state.results.find((r) => r.kind === 'report'); if (rep && rep.kind === 'report') console.log(`  W${state.world.week}: ` + rep.entries.map((e) => `${e.text}${e.amount !== undefined ? ' (' + e.amount + ')' : ''}`).join(' | ')); for (const r of state.results) if (r.kind !== 'report') console.log('   card', JSON.stringify(r).slice(0, 200)); }
+        if (process.env.JL_LEVELS && weeks % 10 === 0) {
+          const fmt = (cs: typeof state.player.ludus.creatures) => cs.filter((c) => c.maturity >= 1).map((c) => `${c.species.slice(0, 4)}L${c.level}/${c.xp}`).join(',');
+          console.log(`  L w${state.world.week} me[${fmt(state.player.ludus.creatures)}] ` + state.rivals.slice(0, 3).map((r) => `${r.name.replace('House ', '')}[${fmt(r.creatures)}]`).join(' '));
+        }
         if (process.env.JL_RIVALS && weeks % 10 === 0) console.log(`  R w${state.world.week} ` + state.rivals.map((r) => `${r.name.replace('House ', '')}:${r.denarii}d/${r.keepers.miners + r.keepers.showmen + r.keepers.wardens + r.keepers.spies}k/${r.creatures.length}c/${r.armory.length}g`).join(' '));
         if (process.env.JL_TRACE && weeks % 5 === 0) console.log(`  w${state.world.week} d=${state.player.ludus.denarii} inf=${state.player.ludus.influence} keepers=${JSON.stringify(state.player.ludus.keepers)} dinos=${state.player.ludus.creatures.length} proj=${state.player.ludus.projected}`);
         if (weeks % 40 === 39) {
