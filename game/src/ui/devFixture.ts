@@ -73,7 +73,7 @@ export function buildDevFixture(o: Partial<NewGameOptions> = {}, meta?: Meta): G
   me.portrait = female ? 'f' : 'm';
   me.keepers = { unassigned: 1, miners: 3, showmen: 2, wardens: 2, spies: 1 };
   me.spiesLastWeek = 1;
-  Object.assign(me.buildings, { residence: 2, trainingField: 1, mine: 1, forge: 1, palisade: 1, veterinarium: 1, breedingPen: 2, hatchery: 1, nursery: 1, kitchen: 1 });
+  Object.assign(me.buildings, { residence: 2, trainingField: 1, mine: 1, forge: 1, palisade: 1, veterinarium: 1, breedingPen: 3, hatchery: 1, nursery: 1, kitchen: 1 });
   me.pantry = { rawMeat: 6, primeMeat: 1, mejoberries: 9, kibble_simple: 2, kibble_superior: 1 };
 
   const batiatus = makeLudus('Batiatus', false, 1350);
@@ -129,14 +129,14 @@ export function buildDevFixture(o: Partial<NewGameOptions> = {}, meta?: Meta): G
   Object.assign(flamma, { fame: 24, loyalty: 91, nickname: 'the Ember', favourite: true });
   flamma.career = { ...flamma.career, wins: 4, losses: 1, battles: 5 };
 
-  const tirsa = generateDino({ species: 'velociraptor', sex: 'F', week: WEEK, level: 4 });
+  const tirsa = generateDino({ species: 'velociraptor', sex: 'F', week: WEEK, level: 4, eqAge: 23 });
   tirsa.name = 'Tirsa';
   bred(tirsa, 1, dida, bithus, 0.66);
   tirsa.genes.wild = { str: 5, agi: 7, cun: 4, hp: 3 };
   tirsa.genes.mutPatri = 2;
   batiatus.creatures.push(tirsa);
 
-  const livia = generateDino({ species: 'velociraptor', sex: 'F', week: WEEK, level: 4 });
+  const livia = generateDino({ species: 'velociraptor', sex: 'F', week: WEEK, level: 4, eqAge: 21 });
   livia.name = 'Livia';
   bred(livia, 2, kotyto, seuthes, 0.83);
   livia.genes.wild = { str: 4, agi: 8, cun: 5, hp: 3 };
@@ -146,7 +146,7 @@ export function buildDevFixture(o: Partial<NewGameOptions> = {}, meta?: Meta): G
   livia.genes.colors = [10, 4, 12, 15, 8, 18];
   livia.loyalty = 88;
 
-  const bendis = generateDino({ species: 'velociraptor', sex: 'M', week: WEEK, level: 5 });
+  const bendis = generateDino({ species: 'velociraptor', sex: 'M', week: WEEK, level: 5, eqAge: 22 });
   bendis.name = 'Bendis';
   bred(bendis, 2, tirsa, { id: cotys.id, name: cotys.name }, 0.5);
   bendis.genes.wild = { str: 7, agi: 6, cun: 3, hp: 5 };
@@ -157,24 +157,24 @@ export function buildDevFixture(o: Partial<NewGameOptions> = {}, meta?: Meta): G
   bendis.genes.colors = [21, 5, 0, 13, 22, 36];
   bendis.loyalty = 72;
 
-  const sobek = generateDino({ species: 'spinosaurus', sex: 'M', week: 40, level: 6, tier: 'epic' });
+  const sobek = generateDino({ species: 'spinosaurus', sex: 'M', week: 40, level: 6, tier: 'epic', eqAge: 24 });
   sobek.name = 'Sobek';
   Object.assign(sobek, { fame: 55, loyalty: 64, injury: { type: 'broken', weeks: 2 } });
   sobek.career = { ...sobek.career, wins: 9, losses: 3, kills: 2, battles: 12 };
 
-  const arsaces = generateDino({ species: 'parasaurolophus', sex: 'M', week: WEEK, level: 3 });
+  const arsaces = generateDino({ species: 'parasaurolophus', sex: 'M', week: WEEK, level: 3, eqAge: 20 });
   arsaces.name = 'Arsaces';
   arsaces.away = { kind: 'adventure', weeksLeft: 2, note: 'Escorting a grain caravan to Neapolis' };
 
-  const ajax = generateDino({ species: 'ankylosaurus', sex: 'M', week: WEEK, level: 2 });
+  const ajax = generateDino({ species: 'ankylosaurus', sex: 'M', week: WEEK, level: 2, eqAge: 19 });
   ajax.name = 'Ajax';
   ajax.ill = 1;
 
-  const boudica = generateDino({ species: 'triceratops', sex: 'F', week: WEEK, level: 3 });
+  const boudica = generateDino({ species: 'triceratops', sex: 'F', week: WEEK, level: 3, eqAge: 22 });
   boudica.name = 'Boudica';
   boudica.mateCooldown = 2;
   boudica.genes.wild = { str: 6, agi: 2, cun: 3, hp: 6 };
-  const brennus = generateDino({ species: 'triceratops', sex: 'M', week: WEEK, level: 4 });
+  const brennus = generateDino({ species: 'triceratops', sex: 'M', week: WEEK, level: 4, eqAge: 25 });
   brennus.name = 'Brennus';
   brennus.genes.wild = { str: 8, agi: 3, cun: 1, hp: 5 };
   if (!brennus.traits.includes('Tough')) addTrait(brennus, 'Tough');
@@ -184,7 +184,7 @@ export function buildDevFixture(o: Partial<NewGameOptions> = {}, meta?: Meta): G
   aello.loyalty = 77;
   aello.level = 2;
 
-  const iris = generateDino({ species: 'iguanodon', sex: 'F', week: WEEK, level: 2 });
+  const iris = generateDino({ species: 'iguanodon', sex: 'F', week: WEEK, level: 2, eqAge: 21 });
   iris.name = 'Iris';
 
   me.creatures.push(tetraites, flamma, livia, bendis, sobek, boudica, brennus, arsaces, ajax, iris, aello);

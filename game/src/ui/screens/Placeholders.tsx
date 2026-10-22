@@ -27,7 +27,7 @@ function RivalCard({ r }: { r: Ludus }) {
         <KV k="Creatures">{r.creatures.length}</KV>
         <KV k="Influence"><Influence value={r.influence} size="sm" /></KV>
       </div>
-      <div className="row gap-2 mt-1"><span className="xs muted">Opinion of you</span><Meter value={Math.max(0, op)} max={100} tone={opinionTone(op)} height={5} label="Opinion" /><span className="xs num">{Math.round(op)}</span></div>
+      <div className="row gap-2 mt-1"><span className="xs muted">Opinion</span><Meter value={Math.max(0, op)} max={100} tone={opinionTone(op)} height={5} label="Opinion" /><span className="xs num">{Math.round(op)}</span></div>
     </Panel>
   );
 }

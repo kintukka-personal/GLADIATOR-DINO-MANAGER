@@ -1134,7 +1134,8 @@ export class Battle {
       this.sides[0].modifiers.includes('PoisonedWeapons') || this.sides[1].modifiers.includes('Chained'),
       this.sides[1].modifiers.includes('PoisonedWeapons') || this.sides[0].modifiers.includes('Chained'),
     ];
-    return { winner, decidedBy: this.decidedBy, rounds, log: this.lines, fighters, outcomes, cheated };
+    const playerSide = this.sides[0].player ? 0 : this.sides[1].player ? 1 : undefined;
+    return { winner, decidedBy: this.decidedBy, rounds, log: this.lines, fighters, outcomes, cheated, ...(playerSide !== undefined ? { playerSide } : {}) };
   }
 }
 

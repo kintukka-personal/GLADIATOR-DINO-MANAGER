@@ -67,8 +67,8 @@ export function DinoScreen() {
     <>
       <ScreenHead title="Roster" sub={`${idx + 1} of ${roster.length}`} actions={
         <>
-          <Btn id="dino-prev" variant="ghost" icon="back" aria-label="Previous creature" disabled={roster.length < 2} onClick={() => go(-1)} />
-          <Btn id="dino-next" variant="ghost" icon="arrow" aria-label="Next creature" disabled={roster.length < 2} onClick={() => go(1)} />
+          <Btn id="dino-prev" variant="ghost" icon="chevronLeft" aria-label="Previous creature" disabled={roster.length < 2} onClick={() => go(-1)} />
+          <Btn id="dino-next" variant="ghost" icon="chevronRight" aria-label="Next creature" disabled={roster.length < 2} onClick={() => go(1)} />
           <Btn id="dino-actions" icon="menu" onClick={() => setActions(true)}>Actions</Btn>
         </>
       } />
@@ -368,7 +368,7 @@ function PedigreeTree({ node, g }: { node: PedigreeNode; g: GameState }) {
   const gen3 = gen2.flatMap((p) => [p?.mother, p?.father]);
   return (
     <div className="pedigree" role="tree" aria-label="Pedigree">
-      <div className="ped-col"><PedNode n={node} g={g} self /></div>
+      <div className="ped-col self-col"><PedNode n={node} g={g} self /></div>
       <div className="ped-col">{gen1.map((n, i) => <PedNode key={i} n={n} g={g} />)}</div>
       <div className="ped-col">{gen2.map((n, i) => <PedNode key={i} n={n} g={g} />)}</div>
       <div className="ped-col">{gen3.map((n, i) => <PedNode key={i} n={n} g={g} />)}</div>

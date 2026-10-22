@@ -33,6 +33,8 @@ export interface DinoArtProps {
   scale?: number;
   /** draw young creatures at full frame size (default for bust framing); otherwise they are smaller */
   fill?: boolean;
+  /** scale by size class S/M/L/H inside the frame (scenes where creatures stand side by side) */
+  sizeScale?: boolean;
   animate?: boolean;
   /** greyed out (knocked out, dead, tomb) */
   dead?: boolean;
@@ -42,6 +44,7 @@ export interface DinoArtProps {
 }
 
 const OUTLINE = '#120d0a';
+const SIZE_K: Record<string, number> = { S: 0.74, M: 0.86, L: 1, H: 1.08 };
 const BONE = '#e7dcc2';
 
 function gearFromCreature(c: DinoArtProps['creature']): GearHints {
@@ -129,7 +132,7 @@ function DinoArtImpl(props: DinoArtProps) {
 
   // geometry transforms
   const fill = props.fill ?? framing === 'bust';
-  const s = (props.scale ?? 1) * (fill ? 0.82 + 0.18 * maturity : 0.56 + 0.44 * maturity);
+  const s = (props.scale ?? 1) * (props.sizeScale ? SIZE_K[sp.size] ?? 1 : 1) * (fill ? 0.82 + 0.18 * maturity : 0.56 + 0.44 * maturity);
   const k = 1 + 0.55 * young; // head scale for babies
   const [px, py] = plan.head.pivot;
   const headT = k === 1 ? undefined : `translate(${px} ${py}) scale(${k.toFixed(3)}) translate(${-px} ${-py})`;

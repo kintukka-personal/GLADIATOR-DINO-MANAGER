@@ -53,7 +53,7 @@ export function EstateScreen() {
           const list = ids.filter((id) => (BUILDINGS[id]?.location ?? FALLBACK[id].location) === loc.id);
           const gated = loc.gate && (me.buildings[loc.gate] ?? 0) < 1;
           return (
-            <Panel key={loc.id} label={loc.name} title={gated ? `${loc.name} (closed)` : loc.name} flush className={loc.id === 'capua' ? 'span-2' : undefined}>
+            <Panel key={loc.id} label={`${list.length} buildings`} title={gated ? `${loc.name} (closed)` : loc.name} flush className={loc.id === 'capua' ? 'span-2' : undefined}>
               {gated && <div style={{ padding: '0 14px 8px' }}><Hint icon="lock">{loc.id === 'ariminium' ? 'The first Ariminium Camp comes through an event.' : 'The Rome Mansion comes through a story.'} Then you can build here.</Hint></div>}
               <div className={loc.id === 'capua' ? 'cols' : undefined} style={loc.id === 'capua' ? { gap: 0 } : undefined}>
                 {list.map((id) => <BuildingRow key={id} id={id} />)}
@@ -89,7 +89,7 @@ function BuildingRow({ id }: { id: BuildingId }) {
         {!maxed && nextDesc && <div className="xs muted mt-1"><b>Next:</b> {nextDesc}</div>}
         {!maxed && next && (
           <div className="stat-mini mt-1">
-            {next.keepers > 0 && <span><Icon name="keeper" size={12} /> <b>{next.keepers}</b></span>}
+            {next.keepers > 0 && <span>keepers <b>{next.keepers}</b></span>}
             {next.creatures > 0 && <span>dinos <b>{next.creatures}</b></span>}
             {next.influence > 0 && <span>influence <b>{next.influence}</b></span>}
             {next.residence > 0 && <span>residence <b>{next.residence + 1}</b></span>}

@@ -15,11 +15,12 @@ mkdirSync(OUT, { recursive: true });
 const SHOTS = [
   { name: 'menu', hash: '#dev/menu' },
   { name: 'newgame', hash: '#dev/newgame' },
-  { name: 'newgame-heritage', hash: '#dev/newgame', click: ['#ng-next'] },
+  { name: 'newgame-heritage', hash: '#dev/newgame', fill: [['#ng-lanista', 'Quintus']], click: ['#ng-next'] },
+  { name: 'newgame-rules', hash: '#dev/newgame', fill: [['#ng-lanista', 'Quintus']], click: ['#ng-next', '#ng-next2'] },
   { name: 'hub', hash: '#dev/hub' },
   { name: 'hub-story', hash: '#dev/hub', click: ['#attn-conversation'], wait: 2600 },
   { name: 'hub-decision', hash: '#dev/hub', click: ['#attn-decision'] },
-  { name: 'drawer', hash: '#dev/hub', click: ['#sb-menu'] },
+  { name: 'drawer', hash: '#dev/hub', click: ['#sb-menu'], mobileOnly: true },
   { name: 'ludus', hash: '#dev/ludus' },
   { name: 'ludus-training', hash: '#dev/ludus/training' },
   { name: 'ludus-armory', hash: '#dev/ludus/armory' },
@@ -47,7 +48,8 @@ const SHOTS = [
   { name: 'events', hash: '#dev/events' },
   { name: 'intrigue', hash: '#dev/intrigue' },
   { name: 'results', hash: '#dev/results' },
-  { name: 'results-hatch', hash: '#dev/results', click: ['#result-next', '#result-next'] },
+  { name: 'results-hatch', hash: '#dev/results', click: ['#result-next', '#result-next', '#result-next'] },
+  { name: 'results-report', hash: '#dev/results', click: ['#result-next', '#result-next', '#result-next', '#result-next', '#result-next'] },
   { name: 'battle', hash: '#dev/battle', wait: 2600 },
   { name: 'battle-end', hash: '#dev/battle', click: ['#battle-skip'], wait: 900 },
   { name: 'codex', hash: '#dev/codex/species' },
@@ -80,6 +82,7 @@ for (const vp of viewports) {
       reducedMotion: 'no-preference',
     });
     for (const s of list) {
+      if (s.mobileOnly && !vp.mobile) continue;
       const page = await ctx.newPage();
       const logs = [];
       page.on('console', (m) => { if (m.type() === 'error') logs.push(m.text()); });
@@ -87,6 +90,7 @@ for (const vp of viewports) {
       try {
         await page.goto(BASE + s.hash, { waitUntil: 'networkidle', timeout: 30000 });
         await page.waitForTimeout(500);
+        for (const [sel, val] of s.fill ?? []) await page.fill(sel, val);
         for (const sel of s.click ?? []) {
           await page.click(sel, { timeout: 5000 });
           await page.waitForTimeout(350);

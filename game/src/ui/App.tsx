@@ -145,7 +145,6 @@ function Shell({ devBoot }: { devBoot?: DevBoot }) {
           <TabBar />
         </div>
       )}
-      {store.dev && game && <div className="dev-ribbon" aria-hidden="true">dev data</div>}
       {battle && <BattleViewer result={battle.result} title={battle.title} onDone={store.closeBattle} initialSpeed={store.meta.settings.battleSpeed} sideNames={[game?.player.ludus.name ?? 'Your side', 'Opponents']} />}
       <ToastHost />
       <ConfirmHost />
@@ -211,16 +210,18 @@ function StatusBar() {
     <header className="statusbar">
       <Btn id="sb-menu" className="sb-menu hide-wide" variant="ghost" icon="menu" aria-label="Menu" onClick={() => setDrawer(true)} />
       <button type="button" className="sb-week link-plain" onClick={() => store.nav.area('hub')} aria-label="Go to the hub">
-        <span className="sb-wk">Week {g.world.week}</span>
+        <span className="sb-wk">Week {g.world.week}{store.dev && <span className="dev-tag" title="Playing on hand-built development data">dev data</span>}</span>
         <span className="sb-season">{seasonName(g.world.week)} · {g.world.temperature}°C</span>
       </button>
       <div className="sb-res">
         <Money value={me.denarii} />
         <Influence value={me.influence} />
       </div>
-      <div className="sb-advance">
-        <AdvanceButton compact />
-      </div>
+      {!['results', 'arenaPlay', 'defeated'].includes(store.screen.name) && (
+        <div className="sb-advance">
+          <AdvanceButton compact />
+        </div>
+      )}
       <Drawer open={drawer} onClose={() => setDrawer(false)} />
     </header>
   );

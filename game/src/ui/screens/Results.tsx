@@ -1,13 +1,14 @@
 // Results chain after completeWeek [ResultActivity, LeagueResultActivity, WeekReportActivity] and the
 // game-over screen [DefeatedActivity].
 import React, { useState } from 'react';
-import type { Creature, ResultCard, WeekReportEntry } from '../../engine/types';
+import type { Creature, ResultCard, SpeciesId, WeekReportEntry } from '../../engine/types';
 import { SPECIES } from '../../engine/data/species';
 import { defeatText } from '../../engine/week';
 import { useStore } from '../store';
 import { Btn, Influence, Money, Plaque } from '../components/primitives';
 import { Icon, type IconName } from '../components/Icon';
 import { DinoArt } from '../art/DinoArt';
+import { EggArt } from '../art/EggArt';
 import { camelToWords, fmt, signed } from '../format';
 
 const META: Record<ResultCard['kind'], { icon: IconName; label: string }> = {
@@ -71,8 +72,15 @@ function CardBody({ card }: { card: ResultCard }) {
           </tbody>
         </table>
       );
-    case 'escape':
-      return <><p className="story-intro">{card.text}</p><p className="small"><b>{card.names.join(', ')}</b> · {card.outcome}</p></>;
+    case 'escape': {
+      const who = card.names.map((n) => findByLabel([...g.player.ludus.creatures, ...g.world.horde.rogues], n)).filter((c): c is Creature => !!c);
+      return (
+        <>
+          {who.length > 0 && <div className="result-art">{who.map((c) => <DinoArt key={c.id} creature={c} width={150} flip />)}</div>}
+          <p className="story-intro">{card.text}</p><p className="small"><b>{card.names.join(', ')}</b> · {card.outcome}</p>
+        </>
+      );
+    }
     case 'hatch': {
       const babies = card.names.map((n) => findByLabel(g.player.ludus.creatures, n));
       return (
@@ -95,8 +103,15 @@ function CardBody({ card }: { card: ResultCard }) {
         </>
       );
     }
-    case 'death':
-      return <><p className="story-intro">{card.text}</p><p className="small"><b>{card.names.join(', ')}</b></p></>;
+    case 'death': {
+      const art = card.names.map((n, i) => {
+        const egg = (Object.keys(SPECIES) as SpeciesId[]).find((sid) => n === `${SPECIES[sid].name} egg`);
+        if (egg) return <EggArt key={i} species={egg} size={64} health={0.2} fertilized />;
+        const t = [...g.player.tomb].reverse().find((x) => x.name === n);
+        return t ? <DinoArt key={i} creature={t.creature} width={140} dead /> : null;
+      }).filter(Boolean);
+      return <>{art.length > 0 && <div className="result-art">{art}</div>}<p className="story-intro">{card.text}</p><p className="small"><b>{card.names.join(', ')}</b></p></>;
+    }
     case 'story':
       return <><h3 className="center mb-2">{card.title}</h3><p className="story-intro">{card.text}</p></>;
     case 'report':
@@ -158,7 +173,7 @@ export function DefeatedScreen() {
       <div className="row gap-2 center-x mt-4">
         <Btn variant="primary" icon="home" onClick={() => store.quit()}>Main menu</Btn>
       </div>
-      {g && <p className="xs muted mt-3">{g.player.ludus.name} · {g.player.ludus.creatures.length} creatures · {Object.keys(SPECIES).length ? '' : ''}</p>}
+      {g && <p className="xs muted mt-3">{g.player.ludus.name} · {g.player.ludus.creatures.length} creatures left</p>}
     </div>
   );
 }

@@ -4,7 +4,6 @@
 // auto-follow pauses when the player scrolls up.
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { BattleLogLine, BattleResult, LogKind } from '../../engine/types';
-import { SPECIES } from '../../engine/data/species';
 import { DinoArt } from '../art/DinoArt';
 import { Icon, type IconName } from '../components/Icon';
 import { Btn, Meter, Pill, Segmented } from '../components/primitives';
@@ -30,7 +29,6 @@ const KIND_ICON: Partial<Record<LogKind, IconName>> = {
   yield: 'flag', trick: 'spy', round: 'hourglass', start: 'arena', end: 'trophy', transform: 'moon', info: 'info',
 };
 
-const SIZE_W: Record<string, number> = { S: 0.72, M: 0.86, L: 1, H: 1.12 };
 
 export function BattleViewer({ result, onDone, title, initialSpeed = 1, playerSide = 0, sideNames, autoplay = true }: BattleViewerProps) {
   const log = result.log;
@@ -106,7 +104,7 @@ export function BattleViewer({ result, onDone, title, initialSpeed = 1, playerSi
   const sides = useMemo(() => [0, 1].map((s) => fighters.map((f, i) => ({ f, i })).filter((x) => x.f.side === s)), [fighters]);
   const round = line?.round ?? 0;
   const isHit = line && (line.kind === 'attack' || line.kind === 'crit' || line.kind === 'tech' || line.kind === 'glance') && line.target !== undefined;
-  const baseW = Math.max(96, Math.min(230, stageW * 0.34));
+  const baseW = Math.max(110, Math.min(260, stageW * 0.4));
   const won = result.winner === playerSide;
   const names = sideNames ?? ['Your side', 'Opponents'];
 
@@ -114,39 +112,51 @@ export function BattleViewer({ result, onDone, title, initialSpeed = 1, playerSi
     <div className="battle-layer" role="dialog" aria-modal="true" aria-label={title ?? 'Battle'}>
       <div className="battle-top">
         <Icon name="arena" size={20} className="amber" />
-        <div className="grow">
+        <div className="grow" style={{ minWidth: 0 }}>
           <div className="strong ellipsis">{title ?? 'Battle'}</div>
-          <div className="xs muted">{names[0]} vs {names[1]}</div>
+          <div className="xs muted ellipsis">{names[0]} vs {names[1]}</div>
         </div>
         <span className="battle-round num" aria-live="polite">{round > 0 ? `Round ${round}` : 'Start'}</span>
-        <Segmented id="battle-speed" label="Speed" size="sm" value={String(speed) as '1' | '2' | '4'} onChange={(v) => setSpeed(Number(v) as 1 | 2 | 4)}
-          options={[{ value: '1', label: '1×' }, { value: '2', label: '2×' }, { value: '4', label: '4×' }]} />
       </div>
       <div className="battle-stage" ref={stageRef}>
         {line?.crit && <div key={`fl${idx}`} className="battle-flash" />}
+        <div className="battle-huds">
+          {sides.map((list, s) => (
+            <div key={s} className={`col${s === 1 ? ' r' : ''}`}>
+              {list.map(({ f, i }) => {
+                const cur = Math.max(0, hp[i] ?? 0);
+                const frac = cur / Math.max(1, f.hpMax);
+                return (
+                  <div key={f.id} className={`fighter-hud${cur <= 0 ? ' is-ko' : ''}${isHit && line?.target === i ? ' is-target' : ''}${isHit && line?.actor === i ? ' is-actor' : ''}`}>
+                    <div className="row"><span className="fighter-name">{f.name}</span><span className="hpnum">{cur}/{f.hpMax}</span></div>
+                    <Meter value={cur} max={f.hpMax} tone={frac < 0.3 ? 'bad' : frac < 0.6 ? 'warn' : 'good'} height={5} label={`${f.name} health`} />
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
         <div className="battle-sides">
           {sides.map((list, s) => (
             <div key={s} className="battle-side">
               {list.map(({ f, i }, k) => {
                 const ko = (hp[i] ?? 0) <= 0;
-                const w = baseW * (SIZE_W[SPECIES[f.species]?.size ?? 'M'] ?? 1) * (k === 0 ? 1 : 0.82);
+                const n = list.length;
+                const w = baseW * (n > 1 ? 0.86 : 1.05) * (k === 0 ? 1 : 0.92);
                 const hit = isHit && line?.target === i;
                 const acting = line?.actor === i && isHit;
+                // front fighter nearest the centre and lowest; others further back and higher
+                const inner = (n > 1 ? 2 : 14) + k * 28;
                 const pos: React.CSSProperties = s === 0
-                  ? { left: `${8 + k * 14}%`, bottom: `${6 + k * 15}%`, zIndex: 3 - k }
-                  : { right: `${8 + k * 14}%`, bottom: `${6 + k * 15}%`, zIndex: 3 - k };
+                  ? { right: `${inner}%`, bottom: `${4 + k * 16}%`, zIndex: 4 - k }
+                  : { left: `${inner}%`, bottom: `${4 + k * 16}%`, zIndex: 4 - k };
                 const pop = line && line.target === i && (line.dmg !== undefined || line.kind === 'miss')
                   ? line.kind === 'miss' ? { cls: 'miss', text: 'Miss' } : line.kind === 'heal' ? { cls: 'heal', text: `+${line.dmg}` } : line.dmg ? { cls: line.crit ? 'crit' : '', text: `${line.crit ? 'CRIT ' : ''}−${line.dmg}` } : null
                   : null;
                 return (
                   <div key={f.id} className={`fighter side-${s}${hit ? ' hit' : ''}${acting ? ` actor-${s}` : ''}${ko ? ' ko' : ''}`} style={pos}>
-                    <div className="fighter-hud">
-                      <div className="fighter-name">{f.name}</div>
-                      <Meter value={Math.max(0, hp[i] ?? 0)} max={f.hpMax} tone={(hp[i] ?? 0) / f.hpMax < 0.3 ? 'bad' : (hp[i] ?? 0) / f.hpMax < 0.6 ? 'warn' : 'good'} height={5} label={`${f.name} health`} />
-                      <div className="hpnum">{Math.max(0, hp[i] ?? 0)} / {f.hpMax}</div>
-                    </div>
                     <DinoArt species={f.species} colors={f.colors} sex={f.sex} maturity={f.maturity} seed={f.id} flip={s === 1} width={Math.round(w)}
-                      gear={{ rider: !!f.rider, weapon: !!f.weapon, armor: !!f.armor }} animate={!ko} dead={false} />
+                      gear={{ rider: !!f.rider, weapon: !!f.weapon, armor: !!f.armor }} animate={!ko} sizeScale />
                     {pop && <span key={`p${idx}`} className={`dmg-pop ${pop.cls}`}>{pop.text}</span>}
                   </div>
                 );
@@ -177,15 +187,17 @@ export function BattleViewer({ result, onDone, title, initialSpeed = 1, playerSi
       <div className="battle-bottom">
         {!finished ? (
           <>
-            <Btn id="battle-play" icon={playing ? 'pause' : 'play'} onClick={() => setPlaying((p) => !p)} aria-label={playing ? 'Pause' : 'Play'}>{playing ? 'Pause' : 'Play'}</Btn>
-            <Btn id="battle-step" variant="ghost" icon="chevronRight" disabled={playing} onClick={() => setIdx((i) => Math.min(last, i + 1))}>Step</Btn>
-            <Btn id="battle-skip" variant="ghost" icon="skip" onClick={skip}>Skip</Btn>
+            <Btn id="battle-play" className="lbl-wide" icon={playing ? 'pause' : 'play'} onClick={() => setPlaying((p) => !p)} aria-label={playing ? 'Pause' : 'Play'}>{playing ? 'Pause' : 'Play'}</Btn>
+            <Btn id="battle-step" variant="ghost" icon="chevronRight" disabled={playing} aria-label="Step" onClick={() => setIdx((i) => Math.min(last, i + 1))} />
+            <Btn id="battle-skip" className="lbl-wide" variant="ghost" icon="skip" onClick={skip}>Skip</Btn>
           </>
         ) : (
           <Pill tone={won ? 'good' : 'bad'} icon={won ? 'trophy' : 'skull'}>{won ? 'You won' : 'You lost'}</Pill>
         )}
         <div className="grow" />
-        <Btn id="battle-done" ref={doneRef} variant={finished ? 'primary' : 'default'} iconRight="arrow" onClick={onDone}>{finished ? 'Continue' : 'Close'}</Btn>
+        {!finished && <Segmented id="battle-speed" label="Speed" size="sm" value={String(speed) as '1' | '2' | '4'} onChange={(v) => setSpeed(Number(v) as 1 | 2 | 4)}
+          options={[{ value: '1', label: '1×' }, { value: '2', label: '2×' }, { value: '4', label: '4×' }]} />}
+        <Btn id="battle-done" ref={doneRef} variant={finished ? 'primary' : 'ghost'} iconRight={finished ? 'arrow' : undefined} icon={finished ? undefined : 'close'} aria-label={finished ? undefined : 'Close'} onClick={onDone}>{finished ? 'Continue' : undefined}</Btn>
       </div>
     </div>
   );

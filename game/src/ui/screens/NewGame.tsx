@@ -1,5 +1,5 @@
 // New game wizard [NewGame + HeritageActivity + Advanced settings + AscensionActivity].
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { DifficultyKey, Heritage } from '../../engine/types';
 import { createNewGame, RESERVED_NAMES, type NewGameOptions } from '../../engine/newgame';
 import { selectableAscension, ASCENSION_LEVELS } from '../../engine/ascension';
@@ -41,6 +41,7 @@ export function NewGameScreen() {
   const [rein, setRein] = useState<'young' | 'old'>('young');
   const [slot, setSlot] = useState<number>(pref >= 1 && pref <= SLOTS ? pref : (slots.findIndex((s) => !s) + 1 || 1));
 
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [step]);
   const nameErr = !lanista.trim() ? 'Your lanista needs a name.' : RESERVED_NAMES.includes(lanista.trim().toLowerCase()) ? 'That name belongs to someone in Capua already.' : lanista.length > 16 ? 'At most 16 characters.' : null;
   const diff: DifficultyKey = nightmare ? 'nightmare' : hard ? 'hard' : 'normal';
   const maxAsc = safe(() => selectableAscension(m, diff), m.ascension[diff] ?? 0);

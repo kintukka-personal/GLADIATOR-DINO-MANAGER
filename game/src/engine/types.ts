@@ -423,7 +423,7 @@ export interface Creature {
   bornWeek?: number;
   /** name of the ludus where it hatched */
   hatchedAt?: string;
-  /** werewolf (Moon Frenzy) active this battle (transient) */
+  /** free-form notes (scripted gear hints, history) */
   notes?: string[];
   /** epic market roll */
   epic?: boolean;
@@ -778,6 +778,8 @@ export interface BattleResult {
   outcomes: FighterOutcome[];
   /** did the player side cheat, used for opinion effects */
   cheated?: [boolean, boolean];
+  /** which side is the player's, when the player fights */
+  playerSide?: 0 | 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -1156,8 +1158,8 @@ export type ResultCard =
   | { kind: 'election'; won: boolean; office: 'senate' | 'consul'; votes: number }
   | { kind: 'league'; league: LeagueId; standings: { name: string; house: string; points: number }[] }
   | { kind: 'escape'; text: string; names: string[]; outcome: string }
-  | { kind: 'hatch'; names: string[]; text: string }
-  | { kind: 'death'; names: string[]; text: string }
+  | { kind: 'hatch'; names: string[]; text: string; ids?: ID[] }
+  | { kind: 'death'; names: string[]; text: string; ids?: ID[] }
   | { kind: 'story'; title: string; text: string }
   | { kind: 'report'; entries: WeekReportEntry[]; week: number };
 

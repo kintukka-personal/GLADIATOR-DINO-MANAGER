@@ -541,7 +541,7 @@ function Pantry() {
         <p className="small">One unfertilized egg + 1 Raw Meat or Mejoberries + 10 denarii makes a kibble. The egg&rsquo;s size sets the tier. Kibble answers Feed requests and tames wild captures better.</p>
         <div className="table-wrap mt-2">
           <table className="table">
-            <thead><tr><th>Egg</th><th>Kibble</th><th className="num">Market</th><th>Preferred by</th></tr></thead>
+            <thead><tr><th>Egg</th><th>Kibble · preferred by</th><th className="num">Market</th></tr></thead>
             <tbody>
               {(['small', 'medium', 'large', 'xlarge', 'mythic'] as const).map((sz) => {
                 const tier = TIER_FOR_EGG[sz];
@@ -549,9 +549,8 @@ function Pantry() {
                 return (
                   <tr key={sz}>
                     <td>{EGG_SIZE_NAME[sz]}</td>
-                    <td className="strong">{FOODS[k].name}</td>
+                    <td style={{ whiteSpace: 'normal' }}><b>{FOODS[k].name}</b><div className="xs muted">{prefer(tier).join(', ') || (sz === 'mythic' ? 'Mythic beasts' : '—')}</div></td>
                     <td className="num">{fmt(FOODS[k].price)}</td>
-                    <td className="muted" style={{ whiteSpace: 'normal', minWidth: 160 }}>{prefer(tier).join(', ') || (sz === 'mythic' ? 'Mythic beasts' : '—')}</td>
                   </tr>
                 );
               })}
@@ -605,7 +604,7 @@ function Bloodlines() {
     <div className="stack">
       <div className="row gap-2 wrap">
         <SpeciesSelect id="bl-species" value={species} onChange={setSpecies} list={speciesList} />
-        <div style={{ minWidth: 200 }}><Toggle id="bl-living" checked={livingOnly} onChange={setLivingOnly} label="Living only" /></div>
+        <Toggle id="bl-living" inline checked={livingOnly} onChange={setLivingOnly} label={<span className="small">Living only</span>} />
         <label className="row gap-1 small muted" htmlFor="bl-sort">
           <Icon name="sort" size={16} />
           <select id="bl-sort" className="select select-sm" value={sort} onChange={(e) => setSort(e.target.value as LineSort)}>

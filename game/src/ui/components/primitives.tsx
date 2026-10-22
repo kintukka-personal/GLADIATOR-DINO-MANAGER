@@ -118,8 +118,8 @@ export function Amber({ value }: { value: number }) {
   return (
     <span className="amber-gem">
       <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 2.5l7.5 6-3 12h-9l-3-12z" fill="var(--amber)" />
-        <path d="M12 2.5l-2.5 6h5zM4.5 8.5h15" fill="none" stroke="var(--amber-ink)" strokeOpacity=".35" strokeWidth="1.2" />
+        <path d="M12 2.5l7.5 6-3 12h-9l-3-12z" fill="var(--gem, var(--amber))" />
+        <path d="M12 2.5l-2.5 6h5zM4.5 8.5h15" fill="none" stroke="var(--gem-line, var(--amber-ink))" strokeOpacity=".4" strokeWidth="1.2" />
       </svg>
       <span className="num">{fmt(value)}</span>
       <span className="sr-only"> Amber</span>
@@ -243,9 +243,9 @@ export function Stepper({ id, value, onDec, onInc, decDisabled, incDisabled, lab
   );
 }
 
-export function Toggle({ id, checked, onChange, label, desc, disabled }: { id: string; checked: boolean; onChange: (v: boolean) => void; label: React.ReactNode; desc?: React.ReactNode; disabled?: boolean }) {
+export function Toggle({ id, checked, onChange, label, desc, disabled, inline }: { id: string; checked: boolean; onChange: (v: boolean) => void; label: React.ReactNode; desc?: React.ReactNode; disabled?: boolean; inline?: boolean }) {
   return (
-    <label className={`toggle${disabled ? ' disabled' : ''}`} htmlFor={id}>
+    <label className={`toggle${inline ? ' toggle-inline' : ''}${disabled ? ' disabled' : ''}`} htmlFor={id}>
       <span className="toggle-text">
         <span className="toggle-label">{label}</span>
         {desc && <span className="toggle-desc xs muted">{desc}</span>}

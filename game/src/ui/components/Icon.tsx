@@ -43,6 +43,7 @@ const ICONS = {
   chevronDown: <><path d="M6 9.5l6 6 6-6" /></>,
   chevronUp: <><path d="M6 14.5l6-6 6 6" /></>,
   chevronRight: <><path d="M9.5 6l6 6-6 6" /></>,
+  chevronLeft: <><path d="M14.5 6l-6 6 6 6" /></>,
   home: <><path d="M4 11l8-6.5 8 6.5" /><path d="M6 9.8V20h12V9.8" /><path d="M10 20v-5.5h4V20" /></>,
   gate: <><path d="M4 20V8.5L12 4l8 4.5V20" /><path d="M8.2 20v-6a3.8 3.8 0 0 1 7.6 0v6" /><path d="M3 20.5h18" /></>,
   amphora: <><path d="M9.5 3.5h5M10.2 3.5v2.6C7.6 7.4 6 10 6 13c0 3.8 2.6 7 6 7.5 3.4-.5 6-3.7 6-7.5 0-3-1.6-5.6-4.2-6.9V3.5" /><path d="M10.2 6.4C8 6.2 6.6 7.4 6.4 9.4M13.8 6.4c2.2-.2 3.6 1 3.8 3" /><path d="M7 13.5h10" opacity=".6" /></>,

@@ -367,6 +367,23 @@ export function HubScreen() {
     { name: 'horde', label: 'Horde', icon: 'horde', badge: 0 },
   ];
 
+  const quickLinks = (
+    <Panel label="Ludus" title="Quick links">
+          <div className="quick">
+            {quick.map((q) => (
+              <button key={q.name} id={`quick-${q.name}`} type="button" className="quick-btn" onClick={() => store.nav.area(q.name)}>
+                <Icon name={q.icon} size={22} />
+                <span>{q.label}</span>
+                {q.badge > 0 && <span className="tb-badge num">{q.badge}</span>}
+              </button>
+            ))}
+          </div>
+          {g.results.length > 0 && (
+            <Btn className="mt-3" block variant="quiet" icon="scroll" onClick={() => store.nav.push({ name: 'results' })}>Last week&rsquo;s report</Btn>
+          )}
+        </Panel>
+  );
+
   return (
     <div className="cols cols-wide-left">
       <div className="stack">
@@ -393,6 +410,7 @@ export function HubScreen() {
           </div>
         </div>
         <div className="advance-big"><AdvanceButton /></div>
+        <div className="hide-narrow">{quickLinks}</div>
         {g.world.ascension > 0 && <Hint icon="temple">Ascension {g.world.ascension}: the gods are watching this run.</Hint>}
       </div>
       <div className="stack">
@@ -416,20 +434,7 @@ export function HubScreen() {
             </ul>
           )}
         </Plaque>
-        <Panel label="Ludus" title="Quick links">
-          <div className="quick">
-            {quick.map((q) => (
-              <button key={q.name} id={`quick-${q.name}`} type="button" className="quick-btn" onClick={() => store.nav.area(q.name)}>
-                <Icon name={q.icon} size={22} />
-                <span>{q.label}</span>
-                {q.badge > 0 && <span className="tb-badge num">{q.badge}</span>}
-              </button>
-            ))}
-          </div>
-          {g.results.length > 0 && (
-            <Btn className="mt-3" block variant="quiet" icon="scroll" onClick={() => store.nav.push({ name: 'results' })}>Last week&rsquo;s report</Btn>
-          )}
-        </Panel>
+        <div className="hide-wide">{quickLinks}</div>
       </div>
       {conv && <ConversationSheet conv={conv} onClose={() => setConv(null)} />}
       {dec && <DecisionSheet d={dec} onClose={() => setDec(null)} />}
