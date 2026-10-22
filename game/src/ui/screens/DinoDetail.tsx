@@ -50,6 +50,12 @@ export function DinoScreen() {
   }
   const tab = store.screen.tab ?? 'stats';
   const beast = c.kind === 'beast';
+  const roster = g.player.ludus.creatures;
+  const idx = roster.findIndex((x) => x.id === c.id);
+  const go = (d: number) => {
+    const n = roster[(idx + d + roster.length) % roster.length];
+    if (n) store.nav.replace({ name: 'dino', id: n.id, tab: n.kind === 'beast' && (tab === 'gear' || tab === 'style') ? 'stats' : tab });
+  };
   const items = [
     { id: 'stats', label: 'Stats', icon: 'target' as const, badge: c.statPoints || undefined },
     { id: 'genetics', label: 'Genetics', icon: 'dna' as const },
@@ -59,7 +65,13 @@ export function DinoScreen() {
   ];
   return (
     <>
-      <ScreenHead title={c.name} sub={SPECIES[c.species].name} actions={<Btn id="dino-actions" icon="menu" onClick={() => setActions(true)}>Actions</Btn>} />
+      <ScreenHead title="Roster" sub={`${idx + 1} of ${roster.length}`} actions={
+        <>
+          <Btn id="dino-prev" variant="ghost" icon="back" aria-label="Previous creature" disabled={roster.length < 2} onClick={() => go(-1)} />
+          <Btn id="dino-next" variant="ghost" icon="arrow" aria-label="Next creature" disabled={roster.length < 2} onClick={() => go(1)} />
+          <Btn id="dino-actions" icon="menu" onClick={() => setActions(true)}>Actions</Btn>
+        </>
+      } />
       <div className="cols cols-wide-left">
         <div className="stack">
           <Hero c={c} g={g} />
@@ -89,7 +101,7 @@ function Hero({ c, g }: { c: Creature; g: GameState }) {
   return (
     <div className="hero">
       <div className="hero-art">
-        <DinoArt creature={c} width={300} animate />
+        <DinoArt creature={c} width={300} animate fill />
       </div>
       <div className="hero-info">
         <div className="row between top gap-2">

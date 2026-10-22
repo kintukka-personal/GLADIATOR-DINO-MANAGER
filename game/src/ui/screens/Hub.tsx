@@ -378,7 +378,6 @@ export function HubScreen() {
               <div className="eo-sub">Lanista {g.player.lanista} · {g.player.heritage[0].toUpperCase() + g.player.heritage.slice(1)}</div>
             </div>
             <div className="estate-chips">
-              <span className="estate-chip"><Icon name="hourglass" size={13} />Week {g.world.week}</span>
               <span className="estate-chip"><Icon name="sun" size={13} />{seasonName(g.world.week)}</span>
               <span className="estate-chip"><Icon name="thermo" size={13} />{g.world.temperature}°C</span>
               {g.world.week % 4 === 0 && <span className="estate-chip"><Icon name="moon" size={13} />Full moon</span>}

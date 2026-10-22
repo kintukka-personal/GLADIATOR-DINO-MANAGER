@@ -192,6 +192,12 @@ function EstateBannerImpl({ ludus, week, star }: { ludus: Ludus; week: number; s
         </g>
       )}
 
+      {/* the star of the ludus, by the gate torches */}
+      {star && (
+        <g transform="translate(222 160)">
+          <DinoArt creature={star} width={150} animate={false} />
+        </g>
+      )}
       {/* palisade / walls */}
       {wall >= 1 && (
         <g fill={INK2}>
@@ -203,12 +209,6 @@ function EstateBannerImpl({ ludus, week, star }: { ludus: Ludus; week: number; s
                 {Array.from({ length: 40 }, (_, i) => <rect key={i} x={i * 20 + 2} y="258" width="12" height="10" />)}
               </>
             )}
-        </g>
-      )}
-      {/* the star of the ludus at the gate */}
-      {star && (
-        <g transform="translate(560 172)">
-          <DinoArt creature={star} width={168} animate={false} />
         </g>
       )}
       <Torch x={372} y={250} />

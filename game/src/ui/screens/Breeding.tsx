@@ -330,7 +330,7 @@ function Hatchery() {
   };
   return (
     <div className="stack">
-      <Plaque label="Hatchery" title={me.buildings.hatchery ? `Level ${me.buildings.hatchery} · ${fert.length} of ${cap} slots` : 'A straw nest'}>
+      <Plaque label={me.buildings.hatchery ? `Hatchery · level ${me.buildings.hatchery}` : 'No hatchery'} title={me.buildings.hatchery ? `${plural(fert.length, 'egg')} · ${plural(cap, 'slot')}` : 'A straw nest'}>
         <div className="ambient">
           <SeasonDial week={g.world.week} />
           <div className="grow">
@@ -368,7 +368,7 @@ function Hatchery() {
                   {!lastOk && <Pill tone={cold ? 'info' : 'bad'} icon="thermo">{cold ? 'Too cold' : 'Too hot'}</Pill>}
                 </div>
                 <div className="xs muted">{e.motherName && e.fatherName ? `${e.motherName} × ${e.fatherName}` : e.source === 'market' ? 'Bought at the market' : 'Unknown parents'} · laid week {e.laidWeek}</div>
-                <div className="grid-2">
+                <div className="egg-meters">
                   <div>
                     <div className="row between xs"><span className="micro">Incubation</span><span className="num">{e.progress}/{e.needed} wk</span></div>
                     <Meter value={e.progress} max={e.needed} tone="amber" height={5} label="Incubation" />
@@ -449,7 +449,7 @@ function Nursery() {
         </div>
         {babies > cap && <Pill tone="bad" icon="warning">Overcrowded: 15% death risk a week</Pill>}
       </div>
-      <Hint icon="baby">Each fulfilled care request adds imprint (+20% to base and wild stats at 100%). A missed request is gone for good. Babies and juveniles eat one {`"diet food"`} a week from the pantry.</Hint>
+      <Hint icon="baby">Answer each care request before you advance: every one adds imprint, and a missed request is gone for good. Babies and juveniles also eat one portion of their usual food a week from the pantry.</Hint>
       <div className="cols">
         {young.map((c) => {
           const sp = SPECIES[c.species];
@@ -464,7 +464,7 @@ function Nursery() {
             <Panel key={c.id} label={`${sp.name} · ${lifePhase(c)}`} title={<span className="row gap-1">{c.name}<SexIcon sex={c.sex} size={14} /></span>}
               actions={<Btn size="sm" variant="ghost" icon="chevronRight" aria-label={`Open ${c.name}`} onClick={() => store.nav.push({ name: 'dino', id: c.id })} />}>
               <div className="row gap-3 top">
-                <span className="dino-thumb" style={{ width: 120, height: 90 }}><DinoArt creature={c} width={112} height={84} animate={false} /></span>
+                <span className="dino-thumb" style={{ width: 120, height: 90 }}><DinoArt creature={c} width={112} height={84} animate={false} fill /></span>
                 <div className="grow stack-sm">
                   <div>
                     <div className="row between xs"><span className="micro">Maturity</span><span className="num">{pct(c.maturity)} · adult in {left}w</span></div>
