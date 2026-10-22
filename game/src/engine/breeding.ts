@@ -176,10 +176,12 @@ export function rollOffspringGenes(mother: ParentGenes, father: ParentGenes, wee
     if (totalMutations(parent) >= MUTATION_LIMIT) continue;
     if (!chance(MUTATION_CHANCE + mutationBonus)) continue;
     const stat: Stat = pick(STATS);
-    let v = parent.wild[stat] + MUTATION_POINTS;
+    // the mutated stat comes from the mutating parent; a second mutation on the same stat stacks
+    const already = mutations.some((m) => m.stat === stat);
+    let v = (already ? wild[stat] : parent.wild[stat]) + MUTATION_POINTS;
     if (v > WILD_CAP) v -= WILD_CAP + 1; // ARK overflow
     wild[stat] = v;
-    mutatedPoints[stat] = parent.mutatedPoints[stat] + MUTATION_POINTS;
+    mutatedPoints[stat] = (already ? mutatedPoints[stat] : parent.mutatedPoints[stat]) + MUTATION_POINTS;
     const region = rand(6);
     const color = rand(COLORS.length);
     colors[region] = color;
