@@ -1,0 +1,125 @@
+/* Jurassic Ludus — "torchlit fresco" design tokens.
+   layout: mobile column — sticky status bar, scrolling plaques, bottom tab bar; ≥960px left rail + 2 columns */
+:root { --bg:#14110e; --wall:#1d1813; --plaque:#262019; --plaque-2:#30281f; --line:#45392c; --bronze:#8a6a3f;
+  --fg:#efe4cf; --muted:#a7967c; --amber:#e3a33b; --amber-ink:#1c1306; --fresco:#9e3326; --verdigris:#4f9a83;
+  --good:#7fb069; --warn:#e0b13b; --bad:#d65a43; --info:#6fa6cf;
+  --font-display:'Marcellus SC', 'Trajan Pro', Georgia, serif; --font-body:'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
+  color-scheme: dark; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { /* "daylight": pale lichen limestone, ink, darker amber */
+  --bg:#dcdfd5; --wall:#e7e9e1; --plaque:#f1f2ec; --plaque-2:#e3e6dc; --line:#b8bcae; --bronze:#8a6a3f;
+  --fg:#1e211b; --muted:#5d6356; --amber:#b5730f; --amber-ink:#fff8ea; --fresco:#9a2e22; --verdigris:#2f7a66;
+  --good:#3f7a2b; --warn:#9a6c00; --bad:#b23a26; --info:#2f6c99; color-scheme: light; } }
+:root[data-theme="light"] { /* same light values */
+  --bg:#dcdfd5; --wall:#e7e9e1; --plaque:#f1f2ec; --plaque-2:#e3e6dc; --line:#b8bcae; --bronze:#8a6a3f;
+  --fg:#1e211b; --muted:#5d6356; --amber:#b5730f; --amber-ink:#fff8ea; --fresco:#9a2e22; --verdigris:#2f7a66;
+  --good:#3f7a2b; --warn:#9a6c00; --bad:#b23a26; --info:#2f6c99; color-scheme: light; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); }
+
+/* ------------------------------------------------------------------------------------------------
+   Derived tokens (not part of the palette contract above; computed from it)
+   ------------------------------------------------------------------------------------------------ */
+:root {
+  --fs-12: 12px; --fs-14: 14px; --fs-16: 16px; --fs-20: 20px; --fs-26: 26px; --fs-34: 34px;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+  --radius: 4px;
+  --tap: 44px;
+  --statusbar-h: 56px;
+  --tabbar-h: 62px;
+  --rail-w: 232px;
+  --content-max: 1180px;
+  --shadow: 0 1px 0 rgba(255, 236, 200, 0.03) inset, 0 2px 8px rgba(0, 0, 0, 0.32);
+  --shadow-lift: 0 10px 32px rgba(0, 0, 0, 0.5);
+  --scrim: rgba(8, 6, 4, 0.66);
+  --glow-amber: 0 0 0 1px color-mix(in srgb, var(--amber) 60%, transparent), 0 0 18px color-mix(in srgb, var(--amber) 28%, transparent);
+  --fresco-panel: linear-gradient(160deg, color-mix(in srgb, var(--fresco) 92%, #000) 0%, color-mix(in srgb, var(--fresco) 70%, #1a0705) 100%);
+  --sand: #b89564;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 1px 4px rgba(40, 44, 30, 0.12);
+  --shadow-lift: 0 10px 30px rgba(30, 34, 24, 0.22);
+  --scrim: rgba(28, 30, 22, 0.42);
+} }
+:root[data-theme="light"] {
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 1px 4px rgba(40, 44, 30, 0.12);
+  --shadow-lift: 0 10px 30px rgba(30, 34, 24, 0.22);
+  --scrim: rgba(28, 30, 22, 0.42);
+}
+
+/* ------------------------------------------------------------------------------------------------
+   Base
+   ------------------------------------------------------------------------------------------------ */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-size: var(--fs-16);
+  line-height: 1.4;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  background:
+    radial-gradient(120% 60% at 50% -8%, color-mix(in srgb, var(--amber) 9%, transparent), transparent 62%),
+    var(--bg);
+  background-attachment: fixed;
+}
+#root { min-height: 100vh; min-height: 100dvh; }
+
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 400; margin: 0; text-wrap: balance; letter-spacing: 0.01em; line-height: 1.15; }
+h1 { font-size: var(--fs-34); }
+h2 { font-size: var(--fs-26); }
+h3 { font-size: var(--fs-20); }
+h4 { font-size: var(--fs-16); }
+p { margin: 0 0 var(--sp-2); text-wrap: pretty; }
+p:last-child { margin-bottom: 0; }
+a { color: var(--amber); }
+small { font-size: var(--fs-12); }
+hr { border: 0; border-top: 1px solid var(--line); margin: var(--sp-3) 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+img, svg { display: block; max-width: 100%; }
+table { border-collapse: collapse; }
+
+.num, .tnum, td, th, .money, .meter-label { font-variant-numeric: tabular-nums; }
+.micro {
+  font-size: var(--fs-12); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; color: var(--muted);
+}
+.display { font-family: var(--font-display); }
+.muted { color: var(--muted); }
+.good { color: var(--good); } .warn { color: var(--warn); } .bad { color: var(--bad); } .info { color: var(--info); }
+.amber { color: var(--amber); } .verdigris { color: var(--verdigris); }
+.small { font-size: var(--fs-14); }
+.xs { font-size: var(--fs-12); }
+.lg { font-size: var(--fs-20); }
+.strong { font-weight: 700; }
+.italic { font-style: italic; }
+.center { text-align: center; }
+.right { text-align: right; }
+.nowrap { white-space: nowrap; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* Visible keyboard focus everywhere */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+::selection { background: color-mix(in srgb, var(--amber) 40%, transparent); }
+
+/* Thin, quiet scrollbars inside scroll containers */
+* { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+
+/* Reduced motion: system setting or the in-game toggle (html.reduce-motion) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+}
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
+  animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important;
+}
