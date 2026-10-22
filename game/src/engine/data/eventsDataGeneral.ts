@@ -51,7 +51,8 @@ export function releaseCreature(s: GameState, c: Creature): void {
 
 function scoutedPits(s: GameState): boolean {
   const id = me(s).id;
-  return s.world.tournaments.some((t) => (t.underground || t.type === 'underground') && t.entries.some((e) => e.houseId === id));
+  // last week's pit fights are still in world.tournaments when the weekly event is drawn
+  return s.world.tournaments.some((t) => t.type === 'underground' && t.entries.some((e) => e.houseId === id));
 }
 
 const WEAPONS_BY_FAMILY: Record<WeaponFamily, GearTypeId[]> = {
@@ -351,7 +352,7 @@ export const GENERAL_EVENTS: EventDef[] = [
     key: 'cestusDuel',
     make(s) {
       if (s.world.flags.cestusDuel) return null;
-      const mel = me(s).creatures.some((c) => c.legend === 'melankomas') || !!s.world.flags.melankomas;
+      const mel = me(s).creatures.some((c) => c.legend === 'melankomas') || !!s.world.flags.melankomasJoined || !!s.world.flags.melankomas;
       if (!mel || wk(s) < 20) return null;
       const champ = champion(s);
       if (!champ) return null;

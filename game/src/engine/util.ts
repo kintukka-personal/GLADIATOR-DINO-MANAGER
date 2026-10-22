@@ -77,6 +77,7 @@ export function report(state: GameState, kind: WeekReportEntry['kind'], text: st
 }
 
 export function achieve(state: GameState, id: import('./types').AchievementId): void {
+  if (state.world.difficulty.sandbox) return; // custom games never earn achievements (GM)
   if (!state.pendingAchievements.includes(id)) state.pendingAchievements.push(id);
 }
 

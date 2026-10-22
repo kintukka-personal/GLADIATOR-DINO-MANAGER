@@ -134,7 +134,7 @@ export function createNewGame(o: NewGameOptions, meta: Meta): GameState {
         ludus.creatures.push(b);
       }
     }
-    ascensionStartEffects(state);
+    ascensionStartEffects(state, { prophecy: meta.prophecy[key] });
   }
 
   message(state, 'magistrate', 'Welcome to Capua!',

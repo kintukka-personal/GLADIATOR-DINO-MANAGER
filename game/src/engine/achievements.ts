@@ -154,8 +154,8 @@ export function checkAchievements(state: GameState): void {
   const obj = (id: string) => p.objectives.find((o) => o.id === id);
   give('conduitOfTheGods', !!obj('pythia4')?.done);
   give('prophecy', !!obj('godsChosen')?.done);
-  // breeding fall-backs (breeding.ts pushes most of these as they happen)
-  const bred = cs.filter((c) => c.genes.bred);
+  // breeding fall-backs (breeding.ts pushes most of these as they happen); only dinos hatched in this ludus
+  const bred = cs.filter((c) => c.genes.bred && c.traits.includes('Hatchling'));
   give('firstClutch', state.runStats.hatched > 0);
   give('mutant', state.runStats.mutations > 0 || bred.some((c) => c.genes.mutations.length > 0));
   give('tripleMutation', bred.some((c) => c.genes.mutations.length >= 3));

@@ -126,7 +126,12 @@ describe('breeding objectives', () => {
     checkObjectives(s);
     expect(findObjective(s, 'firstClutch')?.done).toBe(true);
 
-    const baby = dino('Pip', { species: 'velociraptor' });
+    // a rival-bred, fourth-generation dino bought at the market does not count as breeding
+    const bought = dino('Import', { species: 'velociraptor' });
+    bought.genes.bred = true;
+    bought.genes.generation = 4;
+    me.creatures.push(bought);
+    const baby = dino('Pip', { species: 'velociraptor', traits: ['Hatchling'] });
     baby.genes.bred = true;
     baby.genes.generation = 1;
     baby.maturity = 0.5;

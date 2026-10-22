@@ -211,6 +211,15 @@ describe('calendar', () => {
     expect(seen.solarDawn).toEqual([21]);
   });
 
+  it('AI entrants ignore last week\'s inactive flags (seeding runs before resetWeekFlags)', () => {
+    const s = makeState();
+    for (const r of s.rivals) for (const c of r.creatures) c.inactive = true;
+    s.world.week = 4;
+    s.player.registrations = {};
+    seedWeekTournaments(s);
+    expect(byKey(s, 'challenge').entries.some((e) => s.rivals.some((r) => r.id === e.houseId))).toBe(true);
+  });
+
   it('upcoming() lists this week and predicted future events', () => {
     const s = makeState();
     const u = upcoming(s, 5);

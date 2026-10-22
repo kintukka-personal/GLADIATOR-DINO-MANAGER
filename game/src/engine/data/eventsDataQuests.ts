@@ -11,7 +11,7 @@ import type { EventDef } from '../events';
 import { chance, range } from '../rng';
 import { activeRivals, hasUpgrade, message, report } from '../util';
 import { addTrait, generateDino, getStat, hasTrait } from '../creature';
-import { changeOpinion } from '../rivals';
+import { changeOpinion, makeLegend } from '../rivals';
 import { committedSpies, loseKeepers, addKeepers } from '../economy';
 import { sendOnAdventure } from '../adventures';
 import { auctionDecision, placeBid, uniqueLot } from './eventsDataPolitics';
@@ -335,8 +335,22 @@ export const QUEST_EVENTS: EventDef[] = [
   },
 ];
 
-/** Agiad: a Spartan-bred Ankylosaurus of the Agiad line. */
+/** Agiad, heir of the Agiad line (the shared legend from rivals.makeLegend; a local build as fallback). */
 export function makeAgiad(s: GameState): Creature {
+  let c: Creature | undefined;
+  try {
+    c = makeLegend(s, 'agiad');
+  } catch {
+    c = undefined;
+  }
+  if (c) {
+    c.loyalty = Math.max(c.loyalty, 90);
+    return c;
+  }
+  return localAgiad(s);
+}
+
+function localAgiad(s: GameState): Creature {
   const c = generateDino({ species: 'ankylosaurus', week: wk(s), level: Math.max(3, Math.round(foeLevel(s) * 0.9)), sex: 'M', bonusWild: 6 });
   c.name = 'Agiad';
   c.legend = 'agiad';

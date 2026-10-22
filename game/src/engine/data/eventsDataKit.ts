@@ -470,7 +470,7 @@ export function foeSide(
   o: { instruction?: Instruction; modifiers?: SideModifier[]; house?: Ludus; used?: Set<ID> } = {},
 ): BattleSide {
   const instr: Record<ID, Instruction | null> = {};
-  for (const c of foes) instr[c.id] = o.instruction ?? (o.house ? c.instruction ?? 'default' : c.instruction ?? 'default');
+  for (const c of foes) instr[c.id] = o.instruction ?? c.instruction ?? 'default';
   const side = buildSide(s, o.house, foes, instr, { riders: true, name, modifiers: o.modifiers ?? [], used: o.used });
   for (const f of side.fighters) {
     const lo = loadoutOf(f.creature);
@@ -528,15 +528,19 @@ export function alliedHelp(s: GameState, taken: Creature[], room: number): { own
     for (const f of side.fighters) allies.push({ ...f, temporary: true });
     names.push(`${r.name} sends ${cname(best)}`);
   }
-  // the Consul's lictors
+  // the Consul's lictors (influence.ts keeps one in storyData.lictor, its harness in storyData.lictorGear)
   if (s.player.consul && own.length + allies.length < room) {
     const stored = s.player.storyData?.lictor;
     const list: Creature[] = Array.isArray(stored) ? stored : stored && typeof stored === 'object' ? [stored as Creature] : [makeLictor(s)];
+    const kit: Gear[] = Array.isArray(s.player.storyData?.lictorGear) ? s.player.storyData.lictorGear : [];
     for (const l of list) {
       if (own.length + allies.length >= room) break;
       if (!l || (l.injury && l.injury.weeks > 0)) continue;
       const side = foeSide(s, [l], 'Lictors');
-      for (const f of side.fighters) allies.push({ ...f, temporary: true });
+      for (const f of side.fighters) {
+        for (const g of kit) if (GEAR[g.type] && !f.gear[GEAR[g.type].slot]) f.gear[GEAR[g.type].slot] = g;
+        allies.push({ ...f, temporary: true });
+      }
       names.push(`your lictor ${l.name} steps in`);
     }
   }
@@ -633,16 +637,3 @@ export function andList(xs: string[]): string {
   if (xs.length <= 1) return xs.join('');
   return `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
 }
-
-/** Weighted chance helper returning the label of the rolled bucket. */
-export function roll<T>(buckets: [number, T][]): T {
-  const total = buckets.reduce((a, [w]) => a + w, 0);
-  let r = range(0, Math.max(0, total - 1));
-  for (const [w, v] of buckets) {
-    if (r < w) return v;
-    r -= w;
-  }
-  return buckets[buckets.length - 1][1];
-}
-
-export { chance };

@@ -240,24 +240,27 @@ const RULES: Record<ObjectiveId, Rule> = {
   firstClutch: {
     goal: 1, window: [2, 100000],
     spawn: (s) => me(s).buildings.breedingPen >= 1 || hasAdultPair(s),
-    progress: (s, o) => (flag(o, 'egg') || counter(s, 'egg') > 0 || s.runStats.hatched > 0
+    progress: (s, o) => (flag(o, 'egg') || counter(s, 'egg') > 0
       || me(s).eggs.some((e) => e.fertilized && e.source === 'bred')
-      || me(s).creatures.some((c) => !!c.pregnancy) ? 1 : 0),
+      || me(s).creatures.some((c) => !!c.pregnancy || (homeBred(c) && !!c.genes.motherId)) ? 1 : 0),
     pay: (s) => { cash(s, 150); inf(s, 5); },
   },
   imprintBaby: {
     goal: 1, window: [2, 100000],
-    spawn: (s) => s.runStats.hatched > 0 || me(s).creatures.some((c) => c.genes.bred && c.maturity < 1),
-    progress: (s, o) => (flag(o, 'imprinted') || me(s).creatures.some((c) => c.genes.bred && isAdult(c) && c.genes.imprint >= 0.999) ? 1 : 0),
+    spawn: (s) => s.runStats.hatched > 0 || me(s).creatures.some((c) => homeBred(c) && c.maturity < 1),
+    progress: (s, o) => (flag(o, 'imprinted') || me(s).creatures.some((c) => homeBred(c) && isAdult(c) && c.genes.imprint >= 0.999) ? 1 : 0),
     pay: (s) => { giveGear(me(s), newGear('luckyTooth', 2)); inf(s, 10); },
   },
   bloodline: {
     goal: 3, window: [2, 100000],
-    spawn: (s) => me(s).creatures.some((c) => c.genes.bred && c.genes.generation >= 1),
-    progress: (s) => Math.min(3, Math.max(s.runStats.maxGeneration, ...me(s).creatures.map((c) => (c.genes.bred ? c.genes.generation : 0)))),
+    spawn: (s) => s.runStats.hatched > 0 || me(s).creatures.some((c) => homeBred(c)),
+    progress: (s) => Math.min(3, Math.max(s.runStats.maxGeneration, ...me(s).creatures.map((c) => (homeBred(c) ? c.genes.generation : 0)))),
     pay: (s) => { giveGear(me(s), newGear('bestiaryScroll', 2)); cash(s, 300); inf(s, 20); },
   },
 };
+
+/** Hatched in this ludus (breeding.ts gives player hatchlings the Ludus-Hatched trait). */
+const homeBred = (c: { traits: string[]; genes: { bred: boolean } }) => c.genes.bred && c.traits.includes('Hatchling');
 
 function hasAdultPair(s: GameState): boolean {
   const adults = me(s).creatures.filter((c) => isAdult(c) && SPECIES[c.species].repro !== 'none');

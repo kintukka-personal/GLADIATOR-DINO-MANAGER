@@ -38,7 +38,7 @@ vi.mock('../src/engine/economy', () => ({
   committedSpies: () => 0,
 }));
 vi.mock('../src/engine/buildings', () => ({ buildingTotals: () => ({ pairs: 2, eggSlots: 2, tempControl: 6, nurserySlots: 3, kitchen: true }) }));
-vi.mock('../src/engine/rivals', () => ({ changeOpinion: () => {} }));
+vi.mock('../src/engine/rivals', async (orig) => ({ ...(await orig<typeof import('../src/engine/rivals')>()), changeOpinion: () => {} }));
 vi.mock('../src/engine/horde', () => ({ rebelRaid: () => null, resolveRaid: () => ({ text: '' }) }));
 vi.mock('../src/engine/influence', () => ({ hasOpp: () => false }));
 vi.mock('../src/engine/care', () => ({ bury: () => {} }));
@@ -227,7 +227,7 @@ describe('scripted foes (GM adversary table)', () => {
     const adv = sendOnAdventure(s, 'troyEscort', [hero(s).id], 0);
     resolveAdventure(s, adv.id);
     const [player, foes] = ctl.sides.at(-1);
-    expect(player.fighters.some((f: any) => f.temporary && f.creature.name.includes('Hector'))).toBe(true);
+    expect(player.fighters.some((f: any) => f.temporary && f.creature.name === 'Hector' && f.creature.species === 'triceratops')).toBe(true);
     expect(foes.fighters).toHaveLength(3);
     expect(s.world.flags.troyStage).toBe(1);
   });

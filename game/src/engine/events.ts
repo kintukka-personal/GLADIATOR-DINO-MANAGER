@@ -12,7 +12,7 @@ import type { BattleResult, Decision, GameState, ID } from './types';
 import { pick, weighted } from './rng';
 import { message } from './util';
 import { rebelRaid, resolveRaid } from './horde';
-import { optionProblem, type DelayedHandler } from './data/eventsDataKit';
+import { dn, optionProblem, type DelayedHandler } from './data/eventsDataKit';
 import { GENERAL_EVENTS, GENERAL_DELAYED } from './data/eventsDataGeneral';
 import { POLITICS_EVENTS, POLITICS_DELAYED } from './data/eventsDataPolitics';
 import { QUEST_EVENTS, QUEST_DELAYED } from './data/eventsDataQuests';
@@ -124,6 +124,7 @@ function tutorialDraw(state: GameState): Decision | null {
 /** GM DecisionFactory.getRandomDecision: underworld attack, rebel raid priority, then one eligible event not in history. */
 export function drawWeeklyDecision(state: GameState): Decision | null {
   const p = state.player;
+  refreshDecisions(state);
   // 1. Tartarus underworld attack
   for (const def of EVENTS.filter((e) => e.priority)) {
     if (p.decisions.some((d) => d.key === def.key)) continue;
@@ -156,6 +157,26 @@ export function drawWeeklyDecision(state: GameState): Decision | null {
   return take(state, pickd);
 }
 
+/**
+ * Re-evaluate every pending decision's options against today's purse (costs and requirements are stored
+ * by data/eventsDataKit.decide), so `option.disabled` / `reason` stay true for the UI.
+ */
+export function refreshDecisions(state: GameState): void {
+  for (const d of state.player.decisions) {
+    if (isRaidDecision(d) || !Array.isArray(d.data?.costs)) continue;
+    d.options.forEach((o, i) => {
+      const problem = optionProblem(state, d, i);
+      if (problem) {
+        o.disabled = true;
+        o.reason = d.data.needs?.[i] ?? `Needs ${dn(d.data.costs[i])}.`;
+      } else {
+        delete o.disabled;
+        delete o.reason;
+      }
+    });
+  }
+}
+
 /** Can this option be chosen right now? (null = yes; else the reason). */
 export function decisionOptionProblem(state: GameState, decisionId: ID, option: number): string | null {
   const d = state.player.decisions.find((x) => x.id === decisionId);
@@ -183,6 +204,7 @@ export function resolveDecision(state: GameState, decisionId: ID, option: number
   const r = def.resolve(state, d, option);
   p.decisions = p.decisions.filter((x) => x.id !== d.id);
   p.counters.decisionsResolved = (p.counters.decisionsResolved ?? 0) + 1;
+  refreshDecisions(state);
   return r;
 }
 

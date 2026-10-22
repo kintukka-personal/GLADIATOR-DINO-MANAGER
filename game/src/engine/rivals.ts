@@ -29,7 +29,7 @@ import {
 import { makeLudus } from './newgame';
 import { cleanPairs, registerAncestor } from './breeding';
 import { publicSessionsIncome } from './influence';
-import { addInfluence, addKeepers } from './economy';
+import { addKeepers } from './economy';
 import { build, canBuild } from './buildings';
 import { rewardCreature } from './loyalty';
 import { joinHorde } from './horde';
@@ -542,7 +542,8 @@ function aiRewards(state: GameState, r: Ludus): void {
       continue;
     }
     const cost = 50 * (Math.floor(c.level / 2) + 1);
-    if (r.denarii < cost) continue;
+    // keep the spending buffer unless the dino is close to bolting
+    if (r.denarii - cost < (c.loyalty < 20 ? 0 : buffer(r))) continue;
     rewardCreature(state, r, c);
   }
 }
@@ -576,10 +577,16 @@ function aiConstruct(state: GameState, r: Ludus): void {
 function aiBuyKeepers(state: GameState, r: Ludus): void {
   const week = state.world.week;
   const total = keeperTotal(r);
-  const need = (r.denarii > 400 && total < Math.floor(week / 2) + 2) || unhappyCount(r) > 0 || rebelThreat(state, r) || r.denarii > 1500;
+  const buf = buffer(r);
+  // GM: > 400 denarii and fewer than week/2 + 2 keepers, or unhappy dinos / a rebel threat, or > 1500 denarii.
+  // The unhappy/threat branch only spends above the house's spending buffer (GM leaves it unguarded; houses
+  // starved themselves buying guards).
+  const need = (r.denarii > 400 && total < Math.floor(week / 2) + 2)
+    || ((unhappyCount(r) > 1 || rebelThreat(state, r)) && r.denarii > buf + 100)
+    || r.denarii > 1500;
   if (!need) return;
   let n = 0;
-  while (n < 3 && r.denarii - 100 >= buffer(r) / 2) {
+  while (n < 3 && r.denarii - 100 >= buf) {
     addKeepers(r, 1);
     r.denarii -= 100;
     n++;
@@ -750,17 +757,27 @@ function dumpGear(r: Ludus): void {
   }
 }
 
+/**
+ * GM: new keepers go to entertainment, the mines or security depending on morale, greed and risk. Each new keeper
+ * joins the job furthest below its target share; miners (the only denarii earners) take the remainder.
+ */
 function aiKeeperJobs(state: GameState, r: Ludus): void {
   const k = r.keepers;
   if (k.unassigned <= 0 || !r.ai) return;
   const avgLoyalty = r.creatures.length ? r.creatures.reduce((s, c) => s + c.loyalty, 0) / r.creatures.length : 80;
   const p = r.ai.personality;
+  const poor = r.denarii < 200;
+  const lowMorale = avgLoyalty < 55;
+  const share = poor || p.financial === 'greedy' ? { wardens: 0.15, showmen: 0.1 }
+    : lowMorale ? { wardens: 0.3, showmen: 0.3 } : { wardens: 0.2, showmen: 0.3 };
+  const minWardens = Math.max(2, rebelThreat(state, r) ? state.world.horde.rogues.length + 2 : 0);
+  const spyCap = r.buildings.residence >= 2 && (p.arena === 'risktaker' || p.honesty === 'dishonest' || p.honesty === 'treacherous') ? 2 : 0;
   while (k.unassigned > 0) {
-    let job: KeeperJob;
-    if (avgLoyalty < 55 || rebelThreat(state, r) || k.wardens < 2) job = 'wardens';
-    else if (r.buildings.mine > 0 && (p.financial === 'greedy' || k.miners < k.showmen)) job = 'miners';
-    else if (r.buildings.residence >= 2 && k.spies < 2 && p.arena === 'risktaker' && chance(0.3)) job = 'spies';
-    else job = 'showmen';
+    const total = keeperTotal(r);
+    let job: KeeperJob = 'miners';
+    if (k.wardens < minWardens || k.wardens < Math.ceil(total * share.wardens)) job = 'wardens';
+    else if (k.showmen < Math.ceil(total * share.showmen)) job = 'showmen';
+    else if (k.spies < spyCap) job = 'spies';
     k.unassigned--;
     k[job]++;
   }

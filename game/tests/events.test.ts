@@ -58,7 +58,8 @@ vi.mock('../src/engine/buildings', () => ({
 vi.mock('../src/engine/market', () => ({
   rollMerchant: (s: any) => { s.world.market.merchant = { items: [{ gear: { id: 'g1', type: 'luckyTooth', quality: 2 }, price: 150 }], week: s.world.week }; },
 }));
-vi.mock('../src/engine/rivals', () => ({
+vi.mock('../src/engine/rivals', async (orig) => ({
+  ...(await orig<typeof import('../src/engine/rivals')>()),
   changeOpinion: (_s: any, r: any, d: number) => { if (r.ai) r.ai.opinion += d; },
 }));
 vi.mock('../src/engine/horde', () => ({
@@ -81,6 +82,7 @@ import { makeCreature, generateDino, generateBeast, addTrait } from '../src/engi
 import { makeGear } from '../src/engine/data/gear';
 import {
   EVENTS, EVENT_KEYS, drawWeeklyDecision, resolveDecision, delayedWeek, expireDecisions, eventDef, decisionOptionProblem,
+  refreshDecisions,
 } from '../src/engine/events';
 import { pendingAdventures, resolveAdventure, adventureWeek } from '../src/engine/adventures';
 import { placeBid, uniqueLot } from '../src/engine/data/eventsDataPolitics';
@@ -374,6 +376,22 @@ describe('resolving decisions', () => {
     expect(s.player.ludus.creatures.length).toBe(before + 1);
     expect(s.player.ludus.creatures.at(-1)!.species).toBe('sabertooth');
     expect(s.player.decisions).toHaveLength(0);
+  });
+
+  it('refreshes option availability against the current purse', () => {
+    const s = baseState(31);
+    const d = eventDef('wildBeastOffer')!.make(s)!;
+    s.player.decisions.push(d);
+    expect(d.options[0].disabled).toBeUndefined();
+    s.player.ludus.denarii = 20;
+    refreshDecisions(s);
+    expect(d.options[0].disabled).toBe(true);
+    expect(d.options[0].reason).toMatch(/100/);
+    expect(d.options[1].reason).toMatch(/Woolly Rhinos/);
+    s.player.ludus.denarii = 1000;
+    refreshDecisions(s);
+    expect(d.options[0].disabled).toBeUndefined();
+    expect(d.options[1].disabled).toBe(true);
   });
 
   it('refuses options whose requirements are unmet', () => {

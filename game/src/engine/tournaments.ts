@@ -24,7 +24,7 @@ import { makeGear } from './data/gear';
 import { CLASSES, CLASS_IDS } from './data/classes';
 import { SPECIES } from './data/species';
 import { chance, clamp, coin, pick, rand, shuffle, weighted } from './rng';
-import { achieve, fmt, hasUpgrade, houseById, findCreature, message, newId, ASC } from './util';
+import { achieve, asc, fmt, hasUpgrade, houseById, findCreature, message, newId, ASC } from './util';
 import {
   addTrait, bestStat, canFight, generateBeast, generateDino, grantRareLearnable, grantXp, hasTrait, removeTrait,
   setLevelAndStats, statWorth,
@@ -300,7 +300,9 @@ function makeTournament(state: GameState, d: TournamentDef): Tournament {
     const l = activeLeague(state);
     t.league = l && d.week >= l.start && d.week < l.end && (!d.league || d.league === l.id) ? l.id : undefined;
   }
-  if (d.key === 'romesFinest') t.organizerId = state.rivals.find((r) => r.ai?.key === 'solonius' && !r.defeated)?.id;
+  // GM: Solonius organises Rome's Finest, Magnus the Hippodrome (organiser's gate money, and they always enter)
+  const host = d.key === 'romesFinest' ? 'solonius' : d.key === 'hippodrome' ? 'magnus' : undefined;
+  if (host) t.organizerId = state.rivals.find((r) => r.ai?.key === host && !r.defeated)?.id;
   return t;
 }
 
@@ -394,7 +396,8 @@ export function eligibility(state: GameState, t: Tournament, c: Creature, opts: 
   if (c.away) return 'Away from the ludus.';
   if (c.pregnancy) return 'Pregnant. The crowd would riot, and not in a good way.';
   if (!canFight(c)) return c.injury ? 'Injured.' : 'Too young to fight at all.';
-  if (c.inactive) return 'Busy elsewhere this week.';
+  // AI entrants are picked in resolveWeek before resetWeekFlags, so their `inactive` flag is last week's
+  if (c.inactive && !opts.ai) return 'Busy elsewhere this week.';
   if (h && matingThisWeek(h, c)) return 'In the breeding pen this week.';
   const junior = t.type === 'junior';
   if (!ageEligible(c, junior)) return junior ? 'Too old for the Hatchling Games.' : 'Too young: hatchlings only fight in the Hatchling Games.';
@@ -620,7 +623,7 @@ function openBracket(state: GameState, t: Tournament, playerTeams: ID[][]): void
   const bracket = shuffle(t.entries.slice(0, size));
   for (let i = 0; i + 1 < size; i += 2) {
     if (!isPlayerEntry(state, bracket[i]) || !isPlayerEntry(state, bracket[i + 1])) continue;
-    const j = bracket.findIndex((e, idx) => idx > i + 1 && !isPlayerEntry(state, e) && !isPlayerEntry(state, bracket[idx ^ 1]));
+    const j = bracket.findIndex((e, idx) => idx >> 1 !== i >> 1 && !isPlayerEntry(state, e) && !isPlayerEntry(state, bracket[idx ^ 1]));
     if (j >= 0) [bracket[i + 1], bracket[j]] = [bracket[j], bracket[i + 1]];
   }
   t.entries = bracket;
@@ -779,9 +782,10 @@ function applyCheat(type: CheatType | null, own: SideModifier[], enemy: SideModi
 
 function makeSide(
   state: GameState, t: Tournament, e: Entry, house: Ludus, creatures: Creature[], ins: Record<ID, Instruction | null>,
-  riders: boolean, modifiers: SideModifier[], player: boolean, overrides?: MatchPrep['gear'],
+  riders: boolean, modifiers: SideModifier[], player: boolean, injuryMod: number, overrides?: MatchPrep['gear'],
 ): BattleSide {
-  const side = buildSide(state, house, creatures, ins, { riders, natural: t.natural, name: entryName(state, e), modifiers, player });
+  const side = buildSide(state, house, creatures, ins, { riders, natural: t.natural, name: entryName(state, e), modifiers, player, injuryMod });
+  side.injuryMod = injuryMod;
   if (overrides && creatures.some((c) => overrides[c.id])) {
     const used = new Set<ID>();
     const byId = new Map<ID, BattleFighter>();
@@ -796,6 +800,11 @@ function makeSide(
   side.modifiers = side.modifiers ?? [];
   for (const m of modifiers) if (!side.modifiers.includes(m)) side.modifiers.push(m);
   return side;
+}
+
+/** Pluto's favour: a Temple of Pluto, or the player's Bacchus Patron opportunity (GM 01 §3). */
+function favouredHouse(state: GameState, h: Ludus): boolean {
+  return h.buildings.templeOfPluto > 0 || (h.isPlayer && hasOpp(state, 'bacchusPatron'));
 }
 
 function bathHouseFighter(h: Ludus, cs: Creature[]): ID | undefined {
@@ -858,8 +867,9 @@ function fight(state: GameState, t: Tournament, m: MatchRecord, live: boolean, p
   const odds = c0.length && c1.length ? teamWorth(c0) - teamWorth(c1) : 0;
   let dead: string[] = [];
   let enemyCount = c1.length;
+  const walkover = !c0.length || !c1.length;
 
-  if (!c0.length || !c1.length) {
+  if (walkover) {
     result = fakeResult(c0.length ? 0 : 1);
   } else {
     const h0 = prepHouse(state, e0);
@@ -882,6 +892,13 @@ function fight(state: GameState, t: Tournament, m: MatchRecord, live: boolean, p
     const extra1: BattleFighter[] = [];
     applyCheat(playerCheat, mods0, mods1, extra0, c1);
     applyCheat(aiCheat, mods1, mods0, extra1, c0);
+    // ascension hooks (GM 01 §23): Pluto +1 injury roll for the player's losers, Cronus' Curse of Time
+    const mine0 = isPlayerEntry(state, e0);
+    const sameHouse = mine0 && isPlayerEntry(state, e1);
+    const inj0 = sameHouse ? -2 : mine0 && asc(state, ASC.pluto) ? 1 : 0;
+    const inj1 = sameHouse ? -2 : 0;
+    if (mine0 && asc(state, ASC.cronus)) mods0.push('CurseOfTime');
+    if (sameHouse && asc(state, ASC.cronus)) mods1.push('CurseOfTime');
     // bet (stake paid on placement)
     if (live && vsPlayer && prep?.bet && prep.bet.stake > 0 && hasOpp(state, 'gambler')) {
       stake = Math.max(0, Math.min(prep.bet.stake, 200, me.denarii));
@@ -891,14 +908,14 @@ function fight(state: GameState, t: Tournament, m: MatchRecord, live: boolean, p
         state.player.bets[matchKey(t, m)] = { stake, onSelf };
       }
     }
-    const s0 = makeSide(state, t, e0, h0, c0, ins0, riders0, mods0, isPlayerEntry(state, e0), live ? prep?.gear : undefined);
-    const s1 = makeSide(state, t, e1, h1, c1, ins1, riders1, mods1, false);
+    const s0 = makeSide(state, t, e0, h0, c0, ins0, riders0, mods0, mine0, inj0, live ? prep?.gear : undefined);
+    const s1 = makeSide(state, t, e1, h1, c1, ins1, riders1, mods1, sameHouse, inj1);
     s0.fighters.push(...extra0);
     s1.fighters.push(...extra1);
     enemyCount = s1.fighters.length;
     const opts: BattleOptions = {
       week: state.world.week, rounds: t.rounds, riders: riders0 || riders1, natural: t.natural,
-      favoured: [h0.buildings.templeOfPluto > 0, h1.buildings.templeOfPluto > 0],
+      favoured: [favouredHouse(state, h0), favouredHouse(state, h1)],
       bathHouse: [bathHouseFighter(h0, c0), bathHouseFighter(h1, c1)], label: `${t.name}: ${label}`,
     };
     result = resolveBattle([s0, s1], opts);
@@ -916,7 +933,8 @@ function fight(state: GameState, t: Tournament, m: MatchRecord, live: boolean, p
   winner.roundsWon++;
   loser.eliminated = true;
 
-  const how = result.decidedBy === 'crowd' ? ' The crowd decided it.' : result.decidedBy === 'forfeit' ? ' The loser yielded the sand.' : '';
+  const how = walkover ? ' Nobody turned up to face them: a walkover.'
+    : result.decidedBy === 'crowd' ? ' The crowd decided it.' : result.decidedBy === 'forfeit' ? ' The loser yielded the sand.' : '';
   const graves = dead.length ? ` ${names(dead.map((n) => ({ name: n } as Creature)))} did not leave the sand alive.` : '';
   let text: string;
   let playerWon: boolean | undefined;
@@ -1210,7 +1228,8 @@ function applyWinEffects(t: Tournament, c: Creature, k: number, cleared: boolean
   } else if (t.type === 'ascension') {
     if (cleared) { fame = 50; xp = 150; trait = 'Ascended'; major = true; }
   } else if (t.type === 'prophecy' || t.type === 'troy') {
-    fame = 50; xp = 150; major = true;
+    // GM quirk fixed: retiring early no longer counts as winning the event
+    if (cleared) { fame = 50; xp = 150; major = true; } else { fame = 10; xp = 10; }
   } else if (t.type === 'spartanPankration') {
     fame = 20; xp = 40; trait = 'PankrationChampion';
   } else if (t.underground) {

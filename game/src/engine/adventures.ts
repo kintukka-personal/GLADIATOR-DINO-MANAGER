@@ -25,10 +25,12 @@ import {
 import { SPECIES } from './data/species';
 import { FOODS, KIBBLE_FOR_TIER } from './data/food';
 import { storyHook } from './stories';
+import { makeLegend } from './rivals';
 import { addKeepers } from './economy';
 import {
   L, OFF, UQ, andList, beastFoe, cloneAsFoe, cname, dinoFoe, dn, earn, fitOf, foeOutcome, full, giveGear, giveUnique,
   infl, injure, killMine, me, mine, monsterFoe, rivalById, sname, streetFight, traitName, uniqueName, weakestRival, bestOf,
+  setLoadout,
 } from './data/eventsDataKit';
 
 // ---------------------------------------------------------------------------
@@ -579,10 +581,19 @@ export const ADVENTURE_KEYS: string[] = Object.keys(ADVENTURES);
 /** Scripted allies that join the player's side (Hector on the Troy escort). */
 export function adventureAlly(s: GameState, key: string): Creature {
   if (key === 'hector') {
-    return dinoFoe(s, 'triceratops', "Hector's Triceratops", {
-      mult: 1.3, noScale: true, traits: ['Hero', 'Inspiring'], cls: 'phalanx',
-      gear: [L('bronzeHorn', 3), L('bashPlate', 3), L('bronzeBarding', 3), L('corinthianVisor', 2)],
-    });
+    // the shared Hector legend (rivals.makeLegend), carrying his harness as a scripted loadout
+    let c: Creature | undefined;
+    try {
+      c = makeLegend(s, 'hector');
+    } catch {
+      c = undefined;
+    }
+    if (!c) {
+      c = dinoFoe(s, 'triceratops', 'Hector', { mult: 1.3, noScale: true, traits: ['Hero', 'Inspiring'], cls: 'phalanx' });
+    }
+    c.name = 'Hector';
+    setLoadout(c, [L('hornLance', 4), L('bashPlate', 3), L('bronzeBarding', 3)]);
+    return c;
   }
   return dinoFoe(s, 'iguanodon', 'Ally', {});
 }
