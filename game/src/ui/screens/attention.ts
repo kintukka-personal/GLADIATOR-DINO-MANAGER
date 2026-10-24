@@ -3,6 +3,9 @@ import type { GameState, StoryConversation } from '../../engine/types';
 import { pendingAdventures, type AdventureResolution } from '../../engine/adventures';
 import { safe } from '../safe';
 import { eggAtRisk } from '../format';
+import { committedSpies, weeklyNet } from '../../engine/economy';
+import { hordeSize, raidArmyVsPlayer, raidDanger } from '../../engine/horde';
+import { balance } from '../../engine/balance';
 
 export interface Attention {
   decisions: number;
@@ -17,6 +20,10 @@ export interface Attention {
   objectives: number;
   offers: number;
   statPoints: number;
+  /** weeks until the strongbox is empty at this week's balance (only when it is shrinking and ≤ 8) */
+  runway: { weeks: number; net: number } | null;
+  /** the Horde could break in: its raiding band beats roster/2 + security (numbers only with 2+ spies) */
+  raidRisk: { known: boolean; army: number; defence: number } | null;
 }
 
 export function attention(g: GameState): Attention {
@@ -36,5 +43,17 @@ export function attention(g: GameState): Attention {
     objectives: p.objectives.filter((o) => o.done && !o.claimed).length,
     offers: p.offers.length,
     statPoints: me.creatures.filter((c) => c.statPoints > 0 && c.kind === 'dino').length,
+    runway: safe(() => {
+      const net = weeklyNet(g, me);
+      if (net >= 0) return null;
+      const weeks = Math.max(0, Math.floor(me.denarii / -net));
+      return weeks <= 8 ? { weeks, net } : null;
+    }, null),
+    raidRisk: safe(() => {
+      if (g.world.difficulty.raidsDisabled || hordeSize(g) < 3 || g.world.week < balance(g).raidGrace - 2) return null;
+      const army = raidArmyVsPlayer(g);
+      const danger = raidDanger(g, me, army);
+      return danger > 0 ? { known: committedSpies(g, me) >= 2, army, defence: army - danger } : null;
+    }, null),
   };
 }

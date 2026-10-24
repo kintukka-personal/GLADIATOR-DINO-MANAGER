@@ -2,7 +2,7 @@
 // bottom tab bar on phones, left rail on ≥960px, menu drawer), the screen router and overlays.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { GameState, Meta } from '../engine/types';
-import { loadMeta, deserialize } from '../engine/save';
+import { loadMeta, deserialize, migrateMeta } from '../engine/save';
 import { seasonName } from '../engine/breeding';
 import { StoreProvider, useStore, BARE_SCREENS, TAB_SCREENS, type ScreenName, type ScreenRef, type StoreInit } from './store';
 import { Icon, type IconName } from './components/Icon';
@@ -31,7 +31,8 @@ import { InfluenceScreen } from './screens/Influence';
 import { HordeScreen } from './screens/Horde';
 import { AscensionScreen } from './screens/Ascension';
 import { ResultsScreen, DefeatedScreen } from './screens/Results';
-import { initAudio, setSoundEnabled } from './audio';
+import { initAudio, setEffectsVolume, setSoundEnabled } from './audio';
+import { useMusicDirector } from './musicDirector';
 import { eligibility, register } from '../engine/tournaments';
 import { beginAdvance } from '../engine/week';
 import { TACTIC_KEYS } from '../engine/data/politicsData';
@@ -46,7 +47,9 @@ interface DevBoot { battle?: boolean }
 
 function bootState(boot: HotData): StoreInit & { dev?: DevBoot } {
   const lsMeta = loadMeta();
-  const meta: Meta = boot.meta && typeof boot.meta === 'object' ? { ...lsMeta, ...(boot.meta as Meta), settings: { ...lsMeta.settings, ...((boot.meta as Meta).settings ?? {}) } } : lsMeta;
+  // a hot-swap snapshot may come from an older page version: migrate it like a stored meta
+  const hot = boot.meta && typeof boot.meta === 'object' ? migrateMeta(boot.meta) : null;
+  const meta: Meta = hot ? { ...lsMeta, ...hot, settings: { ...lsMeta.settings, ...hot.settings } } : lsMeta;
   const hash = typeof location !== 'undefined' ? location.hash : '';
   if (hash.startsWith('#dev')) {
     const [, name = 'hub', a, b] = hash.slice(1).split('/');
@@ -146,9 +149,12 @@ function Shell({ devBoot }: { devBoot?: DevBoot }) {
     store.showBattle(devBattle(game), 'Sparring bout (preview)');
   }, [devBoot, game, store]);
 
-  // sound: unlocked on the first gesture, follows Settings → Sound
+  // sound: unlocked on the first gesture, follows Settings → Sound and Effects volume
   useEffect(() => initAudio(), []);
   useEffect(() => setSoundEnabled(store.meta.settings.sound), [store.meta.settings.sound]);
+  useEffect(() => setEffectsVolume(store.meta.settings.sfxVolume ?? 1), [store.meta.settings.sfxVolume]);
+  // music: the mood follows the screen, the battle overlay and night-scene sheets (musicDirector.ts)
+  useMusicDirector(store);
 
   // a run can end mid-week (a lost raid decision): show the Defeated screen once any battle is closed
   useEffect(() => {

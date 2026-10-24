@@ -8,6 +8,7 @@ import { addTrait, generateBeast, generateDino, hasTrait, removeTrait, replaceTr
 import { SPECIES } from './species';
 import { GEAR, gearName, gearWorth } from './gear';
 import { committedSpies, loseKeepers, addKeepers } from '../economy';
+import { eventKeeperLimit } from '../balance';
 import { constructionLevel, loseRandomBuilding } from '../buildings';
 import { rollMerchant } from '../market';
 import { changeOpinion } from '../rivals';
@@ -1604,7 +1605,7 @@ export const GENERAL_EVENTS: EventDef[] = [
       if (!s.world.difficulty.hard) return null;
       const have = keepers(me(s));
       if (have < 1) return null;
-      const n = Math.min(have, clamp(Math.floor(wk(s) / 5), 1, 8));
+      const n = Math.min(eventKeeperLimit(s, have), clamp(Math.floor(wk(s) / 5), 1, 8));
       const champ = champion(s);
       return decide(s, 'keepersAbducted', 'Keepers abducted',
         `${pl(n, 'keeper')} were snatched on the road from the market. A note pinned to your gate asks for ${dn(50 * n)}, or else.`,

@@ -11,6 +11,7 @@ import { DinoArt } from '../art/DinoArt';
 import { EggArt } from '../art/EggArt';
 import { camelToWords, fmt, signed } from '../format';
 import { sfx } from '../audio';
+import { musicSting } from '../music';
 import { difficultyOf, mostFamous, recordGameOver, runScore } from '../records';
 
 const META: Record<ResultCard['kind'], { icon: IconName; label: string }> = {
@@ -129,7 +130,10 @@ export function ResultsScreen() {
   const [i, setI] = useState(0);
   const cur = cards[Math.min(i, Math.max(0, cards.length - 1))];
   useEffect(() => {
-    if (cur?.kind === 'hatch') sfx.hatch();
+    if (cur?.kind === 'hatch') {
+      sfx.hatch();
+      musicSting('hatch');
+    }
     else if (cur?.kind === 'election' && cur.won) sfx.achievement();
   }, [cur]);
   if (!cards.length) {

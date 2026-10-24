@@ -146,8 +146,9 @@ describe('dynasty', () => {
     const ours = grown.filter((c) => homeBred.has(c.id));
     expect(ours.length).toBeGreaterThan(0);
     expect(ours.every((c) => c.genes.imprint > 0.95)).toBe(true);
-    // a third-generation creature has a pedigree reaching back to the founders
-    const g3 = h.creatures.find((c) => c.genes.generation >= 3);
+    // a third-generation creature bred here has a pedigree reaching back to the founders
+    const g3 = h.creatures.find((c) => c.genes.generation >= 3 && homeBred.has(c.id));
+    expect(g3).toBeTruthy();
     const tree = pedigree(state, g3?.id, 3);
     expect(tree?.mother ?? tree?.father).toBeTruthy();
   });

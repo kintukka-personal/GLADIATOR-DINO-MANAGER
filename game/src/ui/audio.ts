@@ -4,52 +4,150 @@
 //   sfx.tap() · coin() · levelUp() · newWeek() · hatch() · hit() · crit() · miss() · ko() · cheer() · groan()
 //   · achievement() · night()
 //
-// initAudio() is called once from the app shell; setSoundEnabled() follows the setting.
+// initAudio() is called once from the app shell; setSoundEnabled() and setEffectsVolume() follow the settings.
+// The context is shared with the music (music.ts: getAudioContext, holdAudio, onAudioChange): it runs while
+// sound or music wants it and the tab is visible, and is suspended otherwise. It lives on `window.__jlAudio`
+// so a hot-swapped copy of this module (the host may re-run the page script) reuses it instead of opening a
+// second one.
 
 type Ctx = AudioContext;
 
-let ctx: Ctx | null = null;
+interface Shared {
+  ctx: Ctx | null;
+  /** the sound-effects master gain */
+  sfx: GainNode | null;
+  unlocked: boolean;
+  /** who wants the context running ('sfx', 'music') */
+  users: Record<string, boolean>;
+}
+
+const LOCAL: Shared = { ctx: null, sfx: null, unlocked: false, users: {} };
+
+function shared(): Shared {
+  if (typeof window === 'undefined') return LOCAL;
+  const w = window as unknown as { __jlAudio?: Shared };
+  const s = (w.__jlAudio ??= { ctx: null, sfx: null, unlocked: false, users: {} });
+  s.users ??= {};
+  return s;
+}
+
+/** Sound-effects level at 100% (the level the effects were tuned at). */
+const SFX_BASE = 0.55;
+
 let master: GainNode | null = null;
 let enabled = true;
-let unlocked = false;
+let sfxVolume = 1;
 let noiseBuf: AudioBuffer | null = null;
 let lastTap = 0;
+const listeners = new Set<() => void>();
 
 export function setSoundEnabled(on: boolean): void {
   enabled = on;
-  if (!on && ctx && ctx.state === 'running') void ctx.suspend().catch(() => undefined);
-  if (on && ctx && ctx.state === 'suspended' && unlocked) void ctx.resume().catch(() => undefined);
+  shared().users.sfx = on;
+  syncContext();
 }
 
 export function soundEnabled(): boolean {
   return enabled;
 }
 
+/** Settings → Effects volume (0–1, perceptual curve; 1 is the original level). */
+export function setEffectsVolume(v: number): void {
+  sfxVolume = Math.max(0, Math.min(1, Number.isFinite(v) ? v : 1));
+  const s = shared();
+  if (s.ctx && s.sfx) s.sfx.gain.setTargetAtTime(SFX_BASE * sfxVolume * sfxVolume, s.ctx.currentTime, 0.03);
+}
+
+/** True once the player has interacted with the page (audio may start). */
+export function audioUnlocked(): boolean {
+  return shared().unlocked;
+}
+
+export function pageHidden(): boolean {
+  return typeof document !== 'undefined' && document.visibilityState === 'hidden';
+}
+
+/** The shared context, created on demand, or null before the first gesture or without WebAudio. */
+export function getAudioContext(): Ctx | null {
+  return shared().unlocked ? make() : null;
+}
+
+/** Ask for the context to keep running (or release it): the music holds it while it is on. */
+export function holdAudio(user: string, on: boolean): void {
+  shared().users[user] = on;
+  syncContext();
+}
+
+/** Called after the first gesture and on every visibility change. */
+export function onAudioChange(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+function notify(): void {
+  for (const fn of [...listeners]) {
+    try {
+      fn();
+    } catch {
+      /* a listener must never break the page */
+    }
+  }
+}
+
+function wanted(): boolean {
+  const s = shared();
+  const users = { sfx: enabled, ...s.users };
+  return s.unlocked && !pageHidden() && Object.values(users).some(Boolean);
+}
+
+function syncContext(): void {
+  const c = shared().ctx;
+  if (!c || c.state === 'closed') return;
+  if (wanted()) {
+    if (c.state !== 'running') void c.resume().catch(() => undefined);
+  } else if (c.state === 'running') void c.suspend().catch(() => undefined);
+}
+
 function make(): Ctx | null {
-  if (ctx) return ctx;
+  const s = shared();
+  if (s.ctx && s.ctx.state !== 'closed') {
+    master = s.sfx;
+    return s.ctx;
+  }
   const AC: typeof AudioContext | undefined = typeof window !== 'undefined'
     ? (window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)
     : undefined;
   if (!AC) return null;
   try {
-    ctx = new AC();
-    master = ctx.createGain();
-    master.gain.value = 0.55;
-    master.connect(ctx.destination);
+    s.ctx = new AC();
+    s.sfx = s.ctx.createGain();
+    s.sfx.gain.value = SFX_BASE * sfxVolume * sfxVolume;
+    s.sfx.connect(s.ctx.destination);
   } catch {
-    ctx = null;
+    s.ctx = null;
+    s.sfx = null;
   }
-  return ctx;
+  master = s.sfx;
+  return s.ctx;
 }
 
-/** Register the one-time gesture listener that unlocks audio, plus the global button tap sound. */
+/** Register the gesture listener that unlocks audio, the tab-visibility handling, and the global button tap sound. */
 export function initAudio(): () => void {
   if (typeof window === 'undefined') return () => undefined;
   const unlock = () => {
-    unlocked = true;
-    if (!enabled) return;
-    const c = make();
-    if (c && c.state === 'suspended') void c.resume().catch(() => undefined);
+    const s = shared();
+    const first = !s.unlocked;
+    s.unlocked = true;
+    if (wanted()) make();
+    const c = s.ctx;
+    syncContext();
+    if (first || (c && c.state !== 'running')) notify();
+  };
+  const onVisible = () => {
+    syncContext();
+    notify();
   };
   const onClick = (e: MouseEvent) => {
     const el = (e.target as HTMLElement | null)?.closest?.('button, [role="tab"], [role="radio"], [role="switch"], label.toggle');
@@ -63,18 +161,20 @@ export function initAudio(): () => void {
   window.addEventListener('pointerdown', unlock, { capture: true });
   window.addEventListener('keydown', unlock, { capture: true });
   window.addEventListener('click', onClick, { capture: true });
+  document.addEventListener('visibilitychange', onVisible);
   return () => {
     window.removeEventListener('pointerdown', unlock, { capture: true });
     window.removeEventListener('keydown', unlock, { capture: true });
     window.removeEventListener('click', onClick, { capture: true });
+    document.removeEventListener('visibilitychange', onVisible);
   };
 }
 
 function ready(): Ctx | null {
-  if (!enabled || !unlocked) return null;
+  if (!enabled || !shared().unlocked) return null;
   const c = make();
   if (!c || !master) return null;
-  if (c.state === 'suspended') void c.resume().catch(() => undefined);
+  if (c.state !== 'running' && !pageHidden()) void c.resume().catch(() => undefined);
   return c;
 }
 

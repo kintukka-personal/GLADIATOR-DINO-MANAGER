@@ -22,6 +22,7 @@ import { TRAITS } from '../../engine/data/traits';
 import { GEAR, gearName, gearWorth } from '../../engine/data/gear';
 import { houseById } from '../../engine/util';
 import { useStore } from '../store';
+import { useMoodHold } from '../musicDirector';
 import { ScreenHead } from '../components/ScreenHead';
 import { Btn, EmptyState, Hint, Influence, KV, Meter, Money, Panel, Pill, Plaque, Rule, Stepper, type Tone } from '../components/primitives';
 import { Sheet } from '../components/Sheet';
@@ -395,6 +396,7 @@ export function ScenarioSheet({ orderId, onClose }: { orderId: string; onClose: 
   const [res, setRes] = useState<{ text: string; success: boolean; battle?: BattleResult } | null>(o?.resolved ? { text: o.report ?? '', success: false } : null);
   const [mode, setMode] = useState<'sneak' | 'proceed' | 'retreat'>(o?.resolved ? (o.decision === 'retreat' ? 'retreat' : 'proceed') : 'sneak');
   useEffect(() => { if (!o?.resolved) sfx.night(); }, [o?.resolved]);
+  useMoodHold('night');
   if (!o) return null;
   const agent = g.player.ludus.creatures.find((c) => c.id === o.agentId);
   const rival = houseById(g, o.targetHouseId);
@@ -518,6 +520,7 @@ export function DefenseSheet({ d, onClose }: { d: PendingDefense; onClose: () =>
   const prompt = safe(() => defensePromptText(g, d), { title: 'Something stirs in the night', text: raw?.text ?? '', assertive: raw?.assertive ?? 'Confront them', passive: raw?.passive ?? 'Wait' });
   const rival = houseById(g, d.rivalId);
   const spies = safe(() => committedSpies(g, g.player.ludus), 0);
+  useMoodHold('night');
   const answer = (choice: 'assertive' | 'passive') => {
     const r = store.act((s) => resolveDefense(s, d.id, choice), { stringIsText: true });
     if (typeof r === 'string') {

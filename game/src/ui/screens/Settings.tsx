@@ -1,9 +1,10 @@
-// Settings dialog [MainActivity settings]: theme, sound, battle speed, reduce motion, tooltips.
+// Settings dialog [MainActivity settings]: theme, sound and music (with volumes), battle speed, reduce motion, tooltips.
 import React from 'react';
 import { useStore } from '../store';
 import { ScreenHead } from '../components/ScreenHead';
 import { Field, Hint, Panel, Plaque, Segmented, Toggle } from '../components/primitives';
-import { sfx, setSoundEnabled } from '../audio';
+import { sfx, setEffectsVolume, setSoundEnabled } from '../audio';
+import { DEFAULT_MUSIC_VOLUME } from '../music';
 
 export function SettingsScreen() {
   const store = useStore();
@@ -27,9 +28,13 @@ export function SettingsScreen() {
               options={[{ value: '1', label: '1×' }, { value: '2', label: '2×' }, { value: '4', label: '4×' }]} />
           </Field>
         </Panel>
-        <Panel label="Audio" title="Sound">
+        <Panel label="Audio" title="Sound and music">
           <Toggle id="settings-sound" checked={s.sound} onChange={(sound) => { store.setSettings({ sound }); setSoundEnabled(sound); if (sound) window.setTimeout(() => sfx.coin(), 30); }} label="Sound effects" desc="Taps, coins, arena drums, hits, roars and the crowd. All synthesised in the browser." />
-          <Toggle id="settings-music" checked={s.music} onChange={(music) => store.setSettings({ music })} label="Music" desc="Not in the game yet; the switch is remembered for when it arrives." />
+          <Volume id="settings-sfx-volume" label="Effects volume" value={s.sfxVolume ?? 1} disabled={!s.sound}
+            onChange={(sfxVolume) => { store.setSettings({ sfxVolume }); setEffectsVolume(sfxVolume); }} onRelease={() => sfx.coin()} />
+          <Toggle id="settings-music" checked={s.music} onChange={(music) => store.setSettings({ music })} label="Music" desc="Lyre, aulos and frame drums, composed live in the browser and never quite the same twice. It follows the game: warm in the ludus, tense in the arena, dark at night." />
+          <Volume id="settings-music-volume" label="Music volume" value={s.musicVolume ?? DEFAULT_MUSIC_VOLUME} disabled={!s.music}
+            onChange={(musicVolume) => store.setSettings({ musicVolume })} />
         </Panel>
         <Panel label="About" title="Jurassic Ludus">
           <p className="small">A browser remake of Gladiator Manager&rsquo;s systems, with dinosaurs instead of gladiators and ARK: Survival Evolved breeding. Saves stay in this browser; use Export save to move them.</p>
@@ -37,5 +42,15 @@ export function SettingsScreen() {
         </Panel>
       </div>
     </div>
+  );
+}
+
+function Volume({ id, label, value, disabled, onChange, onRelease }: { id: string; label: string; value: number; disabled?: boolean; onChange: (v: number) => void; onRelease?: () => void }) {
+  const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
+  return (
+    <Field id={id} label={<span className="row between"><span>{label}</span><span className="num">{pct}%</span></span>}>
+      <input id={id} type="range" className="range" min={0} max={100} step={5} value={pct} disabled={disabled}
+        onChange={(e) => onChange(Number(e.target.value) / 100)} onPointerUp={onRelease} onKeyUp={onRelease} />
+    </Field>
   );
 }

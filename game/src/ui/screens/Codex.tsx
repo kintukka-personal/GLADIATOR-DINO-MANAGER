@@ -75,6 +75,18 @@ export function CodexScreen() {
             </ol>
           </Plaque>
         )}
+        {page === 'quickstart' && (
+          <Plaque label="Codex" title="Staying alive">
+            <ul>
+              <li><b>Keepers before dinos.</b> A miner earns about 8 denarii a week after upkeep and pays for himself in twelve weeks. Every extra dino costs upkeep, more as it levels.</li>
+              <li><b>Keep a reserve.</b> Two weeks in the red and the creditors start seizing keepers; with none left they close the ludus. The hub warns you when the strongbox will run dry within eight weeks.</li>
+              <li><b>Enter every tournament.</b> Entry is free and the events you do not watch resolve on &ldquo;avoid injury&rdquo;.</li>
+              <li><b>Watch the hills.</b> A raid breaks in when the Horde&rsquo;s band outnumbers your wardens plus half your roster. Wardens and a Palisade keep your keepers at home; two spies tell you the numbers.</li>
+              <li><b>Never leave the pens empty.</b> Keep at least two dinos at home, and sell the crippled ones: they cost full upkeep and lose most fights.</li>
+              <li><b>Take the fight to the Horde.</b> At 100 influence the Senate funds expeditions that can crush it.</li>
+            </ul>
+          </Plaque>
+        )}
         {page === 'species' && (
           <div className="stack">
             <Panel label="Codex" title="Dinos" flush><SpeciesTable ids={DINO_SPECIES} /></Panel>

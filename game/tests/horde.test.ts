@@ -8,7 +8,7 @@ vi.mock('../src/engine/stories', async () => (await import('./intrigueFixture'))
 vi.mock('../src/engine/objectives', async () => (await import('./intrigueFixture')).objectivesMock);
 vi.mock('../src/engine/combat', async () => (await import('./intrigueFixture')).combatMock);
 
-import { makeState, dino, addTo, resetMocks, rivalsMock, objectivesMock, combat, makeRival } from './intrigueFixture';
+import { makeState as makeFixtureState, dino, addTo, resetMocks, rivalsMock, objectivesMock, combat, makeRival } from './intrigueFixture';
 import {
   hordeSize, hordeWeek, timelineWeek, rebelRaid, resolveRaid, joinHorde, expeditionPreview, startExpedition, expeditionWeek,
   resolveExpedition, rebelLeader, raidArmyVsPlayer, hordeIntel,
@@ -17,6 +17,13 @@ import { setSeed } from '../src/engine/rng';
 import { makeGear } from '../src/engine/data/gear';
 import { hasTrait } from '../src/engine/creature';
 import type { Creature, GameState } from '../src/engine/types';
+
+// These tests pin Gladiator Manager's own numbers, so they play under Classic rules (balance.ts).
+function makeState(o: Parameters<typeof makeFixtureState>[0] = {}): GameState {
+  const s = makeFixtureState(o);
+  s.world.difficulty.classic = true;
+  return s;
+}
 
 let state: GameState;
 beforeEach(() => {

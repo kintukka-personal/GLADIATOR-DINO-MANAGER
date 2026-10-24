@@ -6,9 +6,10 @@ import { ascensionProgress } from '../../engine/ascension';
 import { safe } from '../safe';
 import { seasonName } from '../../engine/breeding';
 import { activeConversation, answerConversation } from '../../engine/stories';
-import { resolveDecision } from '../../engine/events';
+import { isRaidDecision, resolveDecision } from '../../engine/events';
 import { resolveAdventure, type AdventureResolution } from '../../engine/adventures';
 import { useStore } from '../store';
+import { useMoodHold } from '../musicDirector';
 import { Icon, type IconName } from '../components/Icon';
 import { Btn, Influence, Money, Panel, Plaque, Hint } from '../components/primitives';
 import { Sheet } from '../components/Sheet';
@@ -213,6 +214,7 @@ function ConversationSheet({ conv, onClose }: { conv: StoryConversation; onClose
 export function DecisionSheet({ d, onClose }: { d: Decision; onClose: () => void }) {
   const store = useStore();
   const [result, setResult] = useState<{ text: string; battle?: BattleResult } | null>(null);
+  useMoodHold(safe(() => isRaidDecision(d), false) ? 'night' : null);
   const choose = (i: number) => {
     const r = store.act((s) => resolveDecision(s, d.id, i));
     if (r) {

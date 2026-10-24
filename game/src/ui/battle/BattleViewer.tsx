@@ -8,6 +8,7 @@ import { DinoArt } from '../art/DinoArt';
 import { Icon, type IconName } from '../components/Icon';
 import { Btn, Meter, Pill, Segmented } from '../components/primitives';
 import { sfx } from '../audio';
+import { musicSting, setMusicIntensity } from '../music';
 
 export interface BattleViewerProps {
   result: BattleResult;
@@ -76,6 +77,7 @@ export function BattleViewer({ result, onDone, title, initialSpeed = 1, playerSi
     if (idx === last) {
       if (result.winner === playerSide) sfx.cheer(); else sfx.groan();
       if (l?.kind === 'ko') sfx.ko();
+      musicSting(result.winner === playerSide ? 'victory' : 'defeat');
       return;
     }
     if (idx - prev > 1 || !l) return;
@@ -84,6 +86,27 @@ export function BattleViewer({ result, onDone, title, initialSpeed = 1, playerSi
     else if (l.kind === 'miss') sfx.miss();
     else if ((l.kind === 'attack' || l.kind === 'tech' || l.kind === 'glance') && l.dmg) sfx.hit();
   }, [idx, last, log, playerSide, result.winner]);
+
+  // the battle music gets hotter as either side's health runs low (and settles once it is decided)
+  useEffect(() => {
+    if (finished) {
+      setMusicIntensity(0);
+      return;
+    }
+    const frac = [0, 1].map((side) => {
+      let cur = 0;
+      let max = 0;
+      fighters.forEach((f, i) => {
+        if (f.side !== side) return;
+        cur += Math.max(0, hp[i] ?? f.hpMax);
+        max += f.hpMax;
+      });
+      return max > 0 ? cur / max : 1;
+    });
+    setMusicIntensity(Math.min(1, (1 - Math.min(frac[0], frac[1])) * 1.25));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, finished]);
+  useEffect(() => () => setMusicIntensity(0), []);
 
   // stage size for sprite scaling
   useLayoutEffect(() => {
