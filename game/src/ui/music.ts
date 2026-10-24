@@ -83,12 +83,13 @@ function res(c: Ctx): Res {
 /**
  * Karplus-Strong pluck for one MIDI note, cached per context. The delay line is an integer length; the
  * playback rate corrects the small tuning error. Low strings ring longer, like gut strings on a kithara.
+ * Rendered at half the context rate (the lyre bus is low-passed at 4.2 kHz anyway): half the memory.
  */
 function ksBuffer(c: Ctx, midi: number): { buf: AudioBuffer; rate: number } {
   const r = res(c);
   const hit = r.ks.get(midi);
   if (hit) return hit;
-  const sr = c.sampleRate;
+  const sr = c.sampleRate > 30000 ? c.sampleRate / 2 : c.sampleRate;
   const f = midiToHz(midi);
   const N = Math.max(4, Math.round(sr / f + 0.5));
   const f0 = sr / (N - 0.5);

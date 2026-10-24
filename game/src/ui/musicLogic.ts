@@ -264,7 +264,7 @@ function openTarget(rng: Rng, prev: number, n: number, lo: number, hi: number): 
   for (const [d, w] of [[4, 5], [1, 3], [3, 2]] as const) {
     for (const k of [-1, 0, 1]) {
       const c = d + k * n;
-      if (c >= lo && c <= hi) opts.push([c, w / (1 + Math.abs(c - prev))]);
+      if (c >= lo && c <= hi) opts.push([c, w / Math.pow(1 + Math.abs(c - prev), 2)]);
     }
   }
   return opts.length ? rng.weighted(opts) : prev;
@@ -383,7 +383,7 @@ const KITS: Record<Mood, Kit | null> = {
       { voice: 'low', pats: ['....P.......P...'], from: 0.3 },
       { voice: 'zill', pats: ['..z...z...z...z.'], from: 0.45 },
     ],
-    ghost: 0.35, fills: ['tTtT', 'DTDT', 'TTTT'], level: 0.8,
+    ghost: 0.35, fills: ['tTtT', 'DTDT', 'TTTT'], level: 0.72,
   },
   // a slow heartbeat
   night: { lanes: [{ voice: 'low', pats: ['Bb..............'], every: 2 }], ghost: 0, fills: [], level: 0.42 },
