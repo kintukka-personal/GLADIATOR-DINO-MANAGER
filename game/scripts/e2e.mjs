@@ -421,7 +421,7 @@ try {
   await shot('hub-end');
   log(`intrigue ${intrigueDone ? 'done' : 'not tried'}, influence ${influenceDone ? 'unlocked' : 'not affordable'}`);
 } catch (e) {
-  errors.push(`script: ${e.message.split('\n')[0]}`);
+  errors.push(`script: ${e.message.split('\n').slice(0, 4).join('\n    ')}`);
   await page.screenshot({ path: join(OUT, `e2e-failure.${tag}.png`) }).catch(() => undefined);
 }
 

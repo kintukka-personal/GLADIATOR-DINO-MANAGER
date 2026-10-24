@@ -164,7 +164,7 @@ function Shell({ devBoot }: { devBoot?: DevBoot }) {
   // Android-style back on Escape (sheets handle their own Escape first)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || document.body.classList.contains('sheet-open')) return;
+      if (e.key !== 'Escape' || e.defaultPrevented || document.body.classList.contains('sheet-open')) return;
       if (store.battle) return;
       if (stack.length > 1) store.nav.pop();
     };

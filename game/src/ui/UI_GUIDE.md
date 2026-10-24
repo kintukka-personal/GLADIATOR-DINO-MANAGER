@@ -14,7 +14,11 @@ src/ui/
   safe.ts               safe() / tryRead() / friendlyError()
   format.ts             pure formatting (numbers, stat labels, region names, hashing)
   derive.ts             stub-safe derived reads that touch engine logic (building totals, keepers, spies)
-  audio.ts              WebAudio synth (no files): sfx.tap/coin/levelUp/newWeek/hatch/hit/crit/miss/ko/cheer/groan/…
+  audio.ts              WebAudio synth (no files): sfx.tap/coin/levelUp/newWeek/hatch/hit/crit/miss/ko/cheer/groan/…,
+                        and the one shared AudioContext (unlock, visibility, effects volume)
+  musicLogic.ts         pure music logic: modes, seeded RNG, motif grammar, per-mood arrangements, stings, moodFor()
+  music.ts              the generative music engine (instruments, look-ahead scheduler, crossfades) + live controller
+  musicDirector.ts      useMusicDirector (shell) and useMoodHold (sheets that are scenes of their own)
   records.ts            account records the engine leaves to the app: game-over highscore + stats, Hall of Fame
   devFixture.ts         hand-built GameState, sample battle, sample week results
   components/           Icon, primitives (Panel, Plaque, Btn, Pill, Money…), Tabs, Sheet, Toast,
@@ -114,7 +118,39 @@ records the run once (`world.flags.uiRunRecorded`; never for dev data).
 **Sound:** `act()` plays a coin when the player's denarii change (pass `{ quiet: true }` when the caller has
 its own cue), achievements play the harp, `finishWeek` the drums and a lyre when a dino levelled. Buttons,
 tabs and switches tick through one capture listener (`initAudio`, mounted by the shell, which also unlocks the
-AudioContext on the first gesture). Everything obeys Settings → Sound (`setSoundEnabled`).
+AudioContext on the first gesture). Everything obeys Settings → Sound (`setSoundEnabled`) and Effects volume
+(`setEffectsVolume`). The context is shared with the music: it runs while either wants it and the tab is
+visible, and is suspended otherwise. It lives on `window.__jlAudio`, so a hot-swapped copy of the page reuses it.
+
+**Music:** generative and synthesised at runtime (the host's CSP blocks audio files, so there are no samples):
+Karplus-Strong lyre and kithara, a double-reed aulos with vibrato and breath, frame drum (dum/tek), tympanum,
+big drum, finger cymbals, a drone and pad, and in the dark moods a distant growl now and then. `musicLogic.ts`
+writes the score one bar at a time from a seeded motif grammar (motif → variations → call and answer →
+cadence; a new section every 4 phrases, the theme drifting slowly) in Hijaz, Dorian, Aeolian or Phrygian
+over a drone. It holds no WebAudio, so `tests/music.test.ts` checks it. `music.ts` plays it: one 50 ms timer
+schedules notes 0.3 s ahead on the audio clock; each mood has its own player and gain, crossfaded over
+about 3 s; everything goes through a reverb, a compressor and a limiter, then Music volume. The moods:
+
+| Mood | Screens |
+|---|---|
+| `title` | main menu, new game, load, and any screen opened without a game |
+| `ludus` | hub, ludus, market, estate, finance, ledger, codex, settings, influence, intrigue, results, … |
+| `nursery` | breeding (pairs, hatchery, nursery, pantry, bloodlines) |
+| `arena` | the arena tab and tournament day (preparation, reports); drums build up |
+| `battle` | while the battle viewer is open; `setMusicIntensity` rises as a side's health drops |
+| `night` | the horde screen, plus any sheet that calls `useMoodHold('night')`: the intrigue night scene, rival schemes, raid decisions |
+| `lament` | the defeated screen |
+
+`SCREEN_MOOD` in `musicLogic.ts` is the one map (`dino` inherits the mood of the screen below it); `moodFor()`
+applies battle > defeat > a sheet's hold > out of game > the screen. A new screen must be added there, and the
+test fails until it is. Stings over a ducked bed: `musicSting('victory' | 'defeat')` (battle viewer, at the
+end), `'hatch'` (hatch result card), `'week'` (`finishWeek`); each waits for its sound effect. Music starts only
+after the first gesture, stops scheduling when Settings → Music is off or the tab is hidden, and keeps one
+scheduler across re-renders and hot swaps (a newer copy disposes the older one through `window`). Settings →
+Music, Music volume (`musicVolume`, default 0.6) and Effects volume (`sfxVolume`) are account settings; metas
+saved before the music arrived are migrated once to music on (`migrateMeta` in `engine/save.ts`). Debug hook:
+`window.__jlMusic.state()` (read only). `node scripts/music-render.mjs` renders every mood and sting offline on
+the real engine and reports peak, RMS and spectral balance (no clipping, −30…−16 dBFS RMS), writing WAV files.
 
 **Overlays:** `await store.confirm({ title, text, confirmLabel, danger })` (never `window.confirm`),
 `store.toast(text, kind)`, `store.showBattle(result, title, onDone, { sideNames: [mine, theirs] })`: the viewer
@@ -233,8 +269,11 @@ auto-follow that pauses when the player scrolls up. Usually opened through `stor
   running; output in `$SHOT_DIR`. It also reports console errors and horizontal overflow.
 - `node scripts/e2e.mjs [--weeks=7] [--desktop] [--light]`: a whole session on the real engine (new game,
   market, Rome's Finest with preparation and the battle viewer, the results chain, then more weeks with
-  decisions, schemes, one intrigue action and an influence unlock when affordable). Exits 1 on any console
+  decisions, schemes, one intrigue action and an influence unlock when affordable). It also lists the music
+  moods heard and checks that Settings → Music stops and restarts the scheduler. Exits 1 on any console
   error; screenshots in `$SHOT_DIR` (default `<tmp>/jl-e2e`).
+- `node scripts/music-render.mjs [--seconds=20] [--out=<dir>]`: the music level check (starts its own Vite
+  server; WAVs in `--out`, default `$MUSIC_DIR` or `<tmp>/jl-music`).
 
 ## 9. Copy and patterns
 

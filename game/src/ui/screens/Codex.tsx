@@ -69,7 +69,7 @@ export function CodexScreen() {
               <li><b>Buy a dino.</b> The week-1 market always has Tetraites, Carpophorus and Flamma, plus the dire wolf pup Aello.</li>
               <li><b>Teach it a technique</b> on its Techniques tab and <b>buy harness</b> (a weapon first) in the market.</li>
               <li><b>Register for a tournament</b> in the Arena and press <b>Advance</b>. One turn is one week.</li>
-              <li><b>Hire keepers</b> and put them to work in Finance: miners for coin, showmen for influence, wardens for security, spies for intel.</li>
+              <li><b>Hire keepers</b> and put them to work in the Estate: miners for coin, showmen for influence, wardens for security, spies for intel.</li>
               <li><b>Build</b> in the Estate: one construction a week. A Breeding Pen, Hatchery and Nursery open the breeding game.</li>
               <li>Keep tameness up. Unhappy dinos break out and join Spartacus&rsquo; Wild Horde.</li>
             </ol>

@@ -83,16 +83,21 @@ function res(c: Ctx): Res {
 /**
  * Karplus-Strong pluck for one MIDI note, cached per context. The delay line is an integer length; the
  * playback rate corrects the small tuning error. Low strings ring longer, like gut strings on a kithara.
- * Rendered at half the context rate (the lyre bus is low-passed at 4.2 kHz anyway): half the memory.
+ * Low and middle strings render at half the context rate (the lyre bus is low-passed at 4.2 kHz anyway).
  */
 function ksBuffer(c: Ctx, midi: number): { buf: AudioBuffer; rate: number } {
   const r = res(c);
   const hit = r.ks.get(midi);
   if (hit) return hit;
-  const sr = c.sampleRate > 30000 ? c.sampleRate / 2 : c.sampleRate;
   const f = midiToHz(midi);
-  const N = Math.max(4, Math.round(sr / f + 0.5));
-  const f0 = sr / (N - 0.5);
+  // high strings keep the full rate (a short loop at half rate would drift out of tune)
+  const half = c.sampleRate > 30000 && c.sampleRate / 2 / f > 48;
+  const sr = half ? c.sampleRate / 2 : c.sampleRate;
+  // the loop filter y = (1 − S)·a + S·b: S = 0.5 is classic KS; a smaller S keeps the overtones ringing (the
+  // lower buffer rate would otherwise dull them), and the loop delay becomes N − S samples
+  const S = half ? 0.16 : 0.3;
+  const N = Math.max(4, Math.round(sr / f + S));
+  const f0 = sr / (N - S);
   const t60 = Math.max(0.8, Math.min(2.6, 2.6 - (midi - 50) * 0.055));
   const len = Math.floor(sr * Math.min(2.4, t60 * 0.85));
   const rho = Math.pow(10, -3 / (t60 * f0));
@@ -101,7 +106,7 @@ function ksBuffer(c: Ctx, midi: number): { buf: AudioBuffer; rate: number } {
   const ex = new Float32Array(N);
   let lp = 0;
   for (let i = 0; i < N; i++) {
-    lp += 0.55 * (rnd() - lp);
+    lp += 0.7 * (rnd() - lp);
     ex[i] = lp;
   }
   const p = Math.max(1, Math.round(N * 0.21));
@@ -121,7 +126,7 @@ function ksBuffer(c: Ctx, midi: number): { buf: AudioBuffer; rate: number } {
     const a = line[idx];
     const nb = idx + 1 === N ? 0 : idx + 1;
     out[n] = a;
-    line[idx] = rho * 0.5 * (a + line[nb]);
+    line[idx] = rho * ((1 - S) * a + S * line[nb]);
     idx = nb;
     const m = a < 0 ? -a : a;
     if (m > peak) peak = m;
