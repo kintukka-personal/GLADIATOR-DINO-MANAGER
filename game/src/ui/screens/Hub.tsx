@@ -6,9 +6,10 @@ import { ascensionProgress } from '../../engine/ascension';
 import { safe } from '../safe';
 import { seasonName } from '../../engine/breeding';
 import { activeConversation, answerConversation } from '../../engine/stories';
-import { resolveDecision } from '../../engine/events';
+import { isRaidDecision, resolveDecision } from '../../engine/events';
 import { resolveAdventure, type AdventureResolution } from '../../engine/adventures';
 import { useStore } from '../store';
+import { useMoodHold } from '../musicDirector';
 import { Icon, type IconName } from '../components/Icon';
 import { Btn, Influence, Money, Panel, Plaque, Hint } from '../components/primitives';
 import { Sheet } from '../components/Sheet';
@@ -213,6 +214,7 @@ function ConversationSheet({ conv, onClose }: { conv: StoryConversation; onClose
 export function DecisionSheet({ d, onClose }: { d: Decision; onClose: () => void }) {
   const store = useStore();
   const [result, setResult] = useState<{ text: string; battle?: BattleResult } | null>(null);
+  useMoodHold(safe(() => isRaidDecision(d), false) ? 'night' : null);
   const choose = (i: number) => {
     const r = store.act((s) => resolveDecision(s, d.id, i));
     if (r) {
@@ -318,6 +320,8 @@ export function HubScreen() {
     const c = me.creatures.find((x) => x.id === o.creatureId);
     rows.push({ id: 'attn-offer', icon: 'coin', tone: 'amber', title: `${houseById(g, o.rivalId)?.name ?? 'A rival'} bids ${fmt(o.amount)} for ${c?.name ?? 'a dino'}`, sub: `Expires week ${o.expiresWeek}`, onClick: () => store.nav.area('market', 'offers') });
   }
+  if (a.runway) rows.push({ id: 'attn-runway', icon: 'coin', tone: 'bad', title: a.runway.weeks === 0 ? 'The strongbox empties next week' : `Money runs out in about ${plural(a.runway.weeks, 'week')}`, sub: `Weekly balance ${fmt(a.runway.net)}. Put keepers in the mines, sell spare gear or a dino you do not need.`, onClick: () => store.nav.area('finance') });
+  if (a.raidRisk) rows.push({ id: 'attn-raid', icon: 'horde', tone: 'bad', title: 'The Horde could break in', sub: a.raidRisk.known ? `A raiding band of about ${a.raidRisk.army} against your defence of ${a.raidRisk.defence} (wardens plus half your roster). Assign wardens or build a Palisade.` : 'Rumours from the hills say the Horde has outgrown your wardens. Assign more, or build a Palisade.', onClick: () => store.nav.area('estate') });
   if (a.injured) rows.push({ id: 'attn-injured', icon: 'injury', tone: 'bad', title: `${plural(a.injured, 'dino')} injured`, sub: me.creatures.filter((c) => c.injury).map((c) => `${c.name} (${c.injury!.weeks}w)`).join(', '), onClick: () => store.nav.area('ludus') });
   if (a.statPoints) rows.push({ id: 'attn-points', icon: 'plus', tone: 'amber', title: `${plural(a.statPoints, 'dino')} with unspent points`, sub: 'Spend them on the Stats tab', onClick: () => store.nav.area('ludus') });
   if (a.unread) rows.push({ id: 'attn-messages', icon: 'message', tone: 'info', title: `${plural(a.unread, 'unread message')}`, sub: g.player.messages.find((m) => !m.read)?.title, onClick: () => store.nav.area('messages') });

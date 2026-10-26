@@ -371,3 +371,36 @@ Capua:
 Mobile-first web app, five-tab bottom bar like GM: **Ludus · Breeding · Market · Arena · Intrigue**, a top
 bar with week, denarii, influence and **Advance**, and a hub with Objectives, Messages, Events, Finance,
 Influence, Estate and Horde.
+
+## 10. Balance
+
+Gladiator Manager's own numbers produce death spirals that its players and reviews call out: raids carry
+keepers off into the rebel army, the army grows faster than any garrison, and level upkeep outruns the purse.
+Measured with a cautious, competent bot (`tests/bots/competent.ts`), GM's numbers let it survive 120 weeks in
+10 of 20 Normal runs and 0 of 20 Hard runs. Our difficulties soften them by degree; every knob lives in
+`src/engine/balance.ts`, and the New Game option **Classic rules** restores GM's numbers.
+
+| Knob | Normal | Hard | Nightmare | Classic (GM) |
+|---|---|---|---|---|
+| Carried-off keepers who join the Horde | 25% | 35% | 60% | 100% |
+| Ferals drifting home each week | 5% | 3% | 1% | 0 |
+| Senate legions: gap / army / weekly chance | 20 / 35 / 50% | 30 / 45 / 40% | 50 / 80 / 30% | 40 / 60 / 25% (Hard 70 / 120) |
+| Raiding band vs the player (share of the army) | 60% | 75% | 90% | 100% |
+| First raid on the player / weeks between raids | week 24 / 8 | week 16 / 7 | week 10 / 6 | none / 6 (Hard 5) |
+| Most keepers / denarii one raid takes | 25% / 40% | 30% / 50% | 45% / 75% | all |
+| Rogue spawn interval | ×1.5 | ×1.5 | ×1.25 | ×1 |
+| Hard rival boosts: buffUp / free Epic chance | – | every 2 weeks / 15% | weekly / 25% | weekly / 25% |
+| Hard bracket fillers | – | normal dinos, +3 levels | Epic, +5 | Epic, +5 |
+| Raids that break in steal a dino | no | no | yes | yes |
+| Hiding with no dino at home ends the run | only with no keepers either | same | same | yes |
+| Abductions take at most | 25% of keepers | 30% | all | all |
+| Level surcharge on upkeep | ×0.5 | ×0.6 | ×1 | ×1 |
+
+Result with the same bot (20 seeds): Normal 20/20 survive 200 weeks; Hard 13/20 survive 120 weeks and 10/20
+survive 200; Nightmare 2/20 survive 120 weeks. Careless play still loses: a lanista who spends every denarius on
+dinos and gear goes bankrupt within eight weeks (12 of 12 runs on Normal and on Hard). Skimping on wardens costs
+keepers and coin to raids but no longer ends a run by itself. `JL_SWEEP=20 npx vitest run tests/survival.test.ts`
+reprints the table.
+
+The hub warns when the strongbox will run dry within eight weeks and when the Horde's raiding band outnumbers
+your wardens plus half your roster (exact numbers with two or more spies).

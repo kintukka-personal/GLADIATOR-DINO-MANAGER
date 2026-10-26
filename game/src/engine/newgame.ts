@@ -26,6 +26,8 @@ export interface NewGameOptions {
   sandbox: boolean;
   raidsDisabled: boolean;
   betrayalsDisabled: boolean;
+  /** Gladiator Manager's original balance numbers */
+  classic?: boolean;
   ascension: number;
   slot: number;
   /** reincarnate the account champion (Ascension runs) */
@@ -84,6 +86,7 @@ export function createNewGame(o: NewGameOptions, meta: Meta): GameState {
   const difficulty: Difficulty = {
     hard: o.hard || o.nightmare, nightmare: o.nightmare, sandbox: o.sandbox,
     raidsDisabled: o.raidsDisabled || o.sandbox, betrayalsDisabled: o.betrayalsDisabled || o.sandbox,
+    ...(o.classic ? { classic: true } : {}),
   };
   const startDenarii = (difficulty.hard ? 800 : 1000) + (o.sandbox ? 5000 : 0) + (o.heritage === 'punic' ? 100 : 0);
   const ludus = makeLudus(o.ludusName?.trim() || `House ${o.lanista}`, true, startDenarii);
@@ -154,7 +157,7 @@ export function emptyMeta(): Meta {
   return {
     version: 1, amber: 250, achievements: [], upgrades: [], ascension: { normal: 0, hard: 0, nightmare: 0 },
     prophecy: { normal: 0, hard: 0, nightmare: 0 }, champions: {}, hallOfFame: [],
-    settings: { sound: true, music: false, battleSpeed: 1, tooltips: true, reduceMotion: false, theme: 'system' },
+    settings: { sound: true, music: true, musicVolume: 0.6, sfxVolume: 1, battleSpeed: 1, tooltips: true, reduceMotion: false, theme: 'system' },
     stats: { runs: 0, weeksPlayed: 0, bestInfluence: 0, bestWeek: 0 }, highscores: [],
   };
 }

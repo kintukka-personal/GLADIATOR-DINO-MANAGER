@@ -37,6 +37,9 @@ export function Sheet({ open, onClose, title, label, children, footer, wide, sti
     }, 30);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && openStack[openStack.length - 1] === id) {
+        // mark it handled: the app's Escape-means-back listener may run after this one, by which time React
+        // has already unmounted the sheet and cleared body.sheet-open
+        e.preventDefault();
         e.stopPropagation();
         onClose();
       }

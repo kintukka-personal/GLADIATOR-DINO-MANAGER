@@ -20,6 +20,7 @@ import { RANDOM_TRAITS, WEEKLY_TRAITS } from './data/traits';
 import { BEAST_MARKET, SPECIES } from './data/species';
 import { TECHNIQUES } from './data/techniques';
 import { chance, clamp, coin, pick, rand, range, shuffle } from './rng';
+import { balance } from './balance';
 import { achieve, asc, ASC, hasUpgrade, message, newId, visibleRivals } from './util';
 import {
   addTrait, autoSpendStatPoints, canFight, classProficiency, eqAge, generateBeast, generateDino, getStats, grantXp,
@@ -493,16 +494,18 @@ function rebelThreat(state: GameState, r: Ludus): boolean {
   return state.world.horde.rogues.length > r.keepers.wardens;
 }
 
-/** Hard mode: weekly buffUp of a random rival dino; after week 20, 25% an Epic dino for a random rival. Once per week. */
+/** Hard mode: GM's weekly buffUp of a random rival dino and, after week 20, 25% an Epic dino for a random rival
+ *  (Nightmare; Hard halves both via balance.ts). Once per week. */
 function hardModeRolls(state: GameState): void {
   const w = state.world;
   if (!w.difficulty.hard || w.flags.hardRollsWeek === w.week) return;
   w.flags.hardRollsWeek = w.week;
   const rivals = state.rivals.filter((r) => !r.defeated);
   if (!rivals.length) return;
+  const b = balance(state);
   const withFit = rivals.filter((r) => r.creatures.some(canFight));
-  if (withFit.length) buffUp(pick(pick(withFit).creatures.filter(canFight)));
-  if (w.week > 20 && chance(0.25)) {
+  if (withFit.length && b.rivalBuffEvery > 0 && w.week % b.rivalBuffEvery === 0) buffUp(pick(pick(withFit).creatures.filter(canFight)));
+  if (w.week > 20 && chance(b.rivalEpicChance)) {
     const r = pick(rivals);
     r.creatures.push(generateDino({ tier: 'epic', level: Math.max(1, Math.floor(w.week / 10)), week: w.week }));
   }
@@ -890,9 +893,8 @@ export function unknownWeek(state: GameState): void {
   }
   const healthy = u.creatures.filter((c) => canFight(c)).length;
   if (u.creatures.length < 3 || healthy < 2) {
-    const c = w.difficulty.hard
-      ? generateDino({ tier: 'epic', level: rand(Math.floor(week / 10) + 1) + 5, week })
-      : generateDino({ week, level: rand(Math.floor(week / 10) + 1) + 2 });
+    const b = balance(state);
+    const c = generateDino({ tier: b.fillerEpic ? 'epic' : 'normal', level: rand(Math.floor(week / 10) + 1) + b.fillerLevelBonus, week });
     u.creatures.push(c);
   }
   while (u.creatures.length > 7) {

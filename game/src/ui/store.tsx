@@ -12,6 +12,7 @@ import { attendedTournament } from '../engine/tournaments';
 import { friendlyError, safe } from './safe';
 import { camelToWords } from './format';
 import { sfx } from './audio';
+import { musicSting } from './music';
 import { inductHallOfFame, recordGameOver } from './records';
 
 // ---------------------------------------------------------------------------------------------
@@ -369,6 +370,7 @@ export function StoreProvider({ init, children }: { init: StoreInit; children: R
       if (g.over) safe(() => recordGameOver(g, m), false);
       const levelled = g.player.ludus.creatures.some((c) => c.level > (levels.get(c.id) ?? c.level));
       if (levelled && !g.over) window.setTimeout(() => sfx.levelUp(), 900);
+      if (!g.over) musicSting('week');
       saveGame(g);
     }
     saveMeta(m);

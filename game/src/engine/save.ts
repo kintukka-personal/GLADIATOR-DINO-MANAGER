@@ -110,12 +110,31 @@ export function slotSummaries(): (SlotSummary | null)[] {
   return out;
 }
 
+/**
+ * Fill a stored account meta up to the current shape. Settings are merged key by key. Metas saved before the
+ * music existed carry `music: false` from the old placeholder switch and no `musicVolume`: those get the music
+ * turned on once, with the default volume (a later "off" is kept because the volume is then present).
+ */
+export function migrateMeta(raw: unknown): Meta {
+  const base = emptyMeta();
+  if (!raw || typeof raw !== 'object') return base;
+  const m = { ...base, ...(raw as Meta) };
+  const s = ((raw as Meta).settings && typeof (raw as Meta).settings === 'object' ? (raw as Meta).settings : {}) as Partial<Meta['settings']>;
+  m.settings = { ...base.settings, ...s };
+  if (typeof s.musicVolume !== 'number') {
+    m.settings.music = true;
+    m.settings.musicVolume = base.settings.musicVolume;
+  }
+  if (typeof s.sfxVolume !== 'number') m.settings.sfxVolume = base.settings.sfxVolume;
+  return m;
+}
+
 export function loadMeta(): Meta {
   const st = storage();
   try {
     const raw = st?.getItem(META_KEY);
     if (!raw) return emptyMeta();
-    return { ...emptyMeta(), ...(JSON.parse(raw) as Meta) };
+    return migrateMeta(JSON.parse(raw));
   } catch {
     return emptyMeta();
   }

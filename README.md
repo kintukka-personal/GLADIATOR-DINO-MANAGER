@@ -53,8 +53,18 @@ The breeding system follows ARK: Survival Evolved's rules from mating to adultho
 - **Bloodlines**: an ancestry registry, pedigrees and generation counters. Rival houses breed too, every 8 weeks
   (every 6 on Hard).
 
+### Balance and music
+
+- **Survivable by design.** Gladiator Manager's raids, Horde growth and upkeep form death spirals. Normal softens
+  them so a careful newcomer survives, and Hard softens them less. In a 20-run sweep with a cautious bot, 20 of 20
+  Normal runs and 10 of 20 Hard runs reached week 200. **Classic rules** on the New Game screen restores the
+  original numbers. The hub warns before money runs out and when the Horde outnumbers your defences.
+- **Generative music.** Everything is synthesised in the browser with WebAudio: lyre, aulos, frame drums and a drone
+  in ancient modes. The mood follows the screen (title, ludus, nursery, arena, battle, night, lament), with stings
+  for victories, defeats, hatchings and new weeks. Music and effects have separate volume sliders in Settings.
+
 [`game/DESIGN.md`](game/DESIGN.md) is the full specification: the terminology map, species, breeding numbers,
-combat, gear, estate and screens.
+combat, gear, estate, screens and the balance table.
 
 ### Play it
 

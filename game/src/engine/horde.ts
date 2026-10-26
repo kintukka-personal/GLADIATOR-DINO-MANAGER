@@ -13,7 +13,8 @@
 import type {
   BattleResult, BattleSide, BuildingId, Creature, Decision, GameState, Gear, GearTypeId, ID, Instruction, Ludus, Quality,
 } from './types';
-import { rand, coin, pick, shuffle, clamp } from './rng';
+import { rand, coin, pick, shuffle, clamp, chance } from './rng';
+import { balance, feralRecruits, raidKeeperLimit, raidPlunderLimit } from './balance';
 import { activeRivals, achieve, asc, ASC, message, newId, ownerOf, report, allHouses } from './util';
 import {
   addTrait, removeTrait, canFight, canFightAge, getStat, grantXp, hasTrait, generateDino, marketPrice,
@@ -189,11 +190,11 @@ function killRogue(state: GameState, c: Creature, cause: string): void {
 function senateIntervention(state: GameState): void {
   const H = state.world.horde;
   const week = state.world.week;
-  const hard = state.world.difficulty.hard;
+  const b = balance(state);
   const f = asc(state, ASC.sol) ? 2 : 1;
-  if (week - H.lastSenateWeek <= (hard ? 70 : 40) * f) return;
-  if (H.rogues.length <= 3 || hordeSize(state) <= (hard ? 120 : 60) * f) return;
-  if (rand(4) !== 0) return;
+  if (week - H.lastSenateWeek <= b.senateGap * f) return;
+  if (H.rogues.length <= 3 || hordeSize(state) <= b.senateArmy * f) return;
+  if (!chance(b.senateChance)) return;
   H.lastSenateWeek = week;
   const spartacus = H.spartacusFree && !H.spartacusDead ? 200 : 0;
   if (rand(800) + 50 > H.ferals + Math.trunc(H.spoils / 100) + spartacus) {
@@ -237,19 +238,20 @@ function growth(state: GameState): void {
   const hard = state.world.difficulty.hard;
   const ascension = state.world.ascension;
   const spartacusLoose = H.spartacusFree && !H.spartacusDead;
+  const every = (n: number) => week % Math.max(1, Math.round(n * balance(state).rogueSpawnPeriod)) === 0;
   // step 12
-  if (week % (hard ? 5 : 7) === 0) {
+  if (every(hard ? 5 : 7)) {
     if (H.rogues.length > 100) H.ferals += 5;
     else newRogue(state, 'epic', Math.trunc(week / 10) + 1);
   }
   if (week > 12 && week % 5 === 0) H.ferals += 1;
   if (spartacusLoose && (hard || week % 2 === 0)) H.ferals += 1;
-  if (week > 25 && week % (hard ? 3 : 4) === 0) {
+  if (week > 25 && every(hard ? 3 : 4)) {
     if (H.rogues.length > 100) H.ferals += 3;
     else newRogue(state, 'normal', Math.trunc(week / 20) + 1);
   }
   // step 17
-  if (week > 40 && week % (ascension <= 2 ? 4 : 2) === 0) {
+  if (week > 40 && every(ascension <= 2 ? 4 : 2)) {
     if (H.rogues.length > 100) H.ferals += 4;
     else newRogue(state, 'epic', Math.trunc(week / 15) + 1);
   }
@@ -292,6 +294,8 @@ export function hordeWeek(state: GameState): void {
     H.ferals += 1;
   }
   growth(state);
+  // ferals drift back to the farms (balance; none on Nightmare)
+  H.ferals -= Math.floor(H.ferals * balance(state).feralDesertion);
   // step 18
   if (!H.expeditionsEnabled && ((hordeSize(state) > 2 && H.rogues.length >= 1) || H.spoils > 500)) {
     H.expeditionsEnabled = true;
@@ -658,6 +662,7 @@ export function raidDanger(state: GameState, h: Ludus, army: number): number {
 export function raidArmyVsPlayer(state: GameState): number {
   let a = hordeSize(state);
   if (a > 30) a = Math.trunc(a / 2) + 15;
+  a = Math.round(a * balance(state).raidArmyScale);
   if (hasOpp(state, 'informants') && a > 7) a -= Math.trunc(a / 8);
   return a;
 }
@@ -680,7 +685,7 @@ function loseRogueBattle(state: GameState, h: Ludus, danger: number): string[] {
     }
     const victim = [...h.creatures].filter((c) => !c.away).sort((a, b) => a.loyalty - b.loyalty)[0];
     if (victim) {
-      if (hard) {
+      if (hard && balance(state).raidStealsCreatures) {
         joinHorde(state, victim, h);
         lines.push(`${victim.name} ran off with the Horde.`);
       } else {
@@ -691,11 +696,14 @@ function loseRogueBattle(state: GameState, h: Ludus, danger: number): string[] {
     }
     const want = Math.max(0, i - Math.trunc(S / 2));
     const have = keeperTotal(h);
-    lost = Math.min(want, have);
+    lost = Math.min(want, raidKeeperLimit(state, have));
     if (lost > 0) loseKeepers(state, h, lost);
-    if (want > lost) {
-      h.denarii -= 50 * (want - lost);
-      lines.push(`Short of keepers to drag off, they took ${50 * (want - lost)} denarii instead.`);
+    if (want > have) {
+      const take = Math.min(50 * (want - have), raidPlunderLimit(state, h.denarii));
+      if (take > 0) {
+        h.denarii -= take;
+        lines.push(`Short of keepers to drag off, they took ${take} denarii instead.`);
+      }
     }
     if (coin()) {
       const b = loseRandomBuilding(h);
@@ -704,12 +712,12 @@ function loseRogueBattle(state: GameState, h: Ludus, danger: number): string[] {
     if (h.creatures.length === 0 && keeperTotal(h) === 0) h.defeated = 'horde';
   } else {
     const want = Math.max(0, i - Math.trunc(S / (hard ? 4 : 2)));
-    lost = Math.min(want, keeperTotal(h));
+    lost = Math.min(want, raidKeeperLimit(state, keeperTotal(h)));
     if (lost > 0) loseKeepers(state, h, lost);
   }
   if (lost > 0) lines.push(`${lost} keepers were carried off to join the Horde.`);
-  H.ferals += lost;
-  const plunder = Math.min(50 * i, Math.max(0, h.denarii));
+  H.ferals += feralRecruits(state, lost);
+  const plunder = Math.min(50 * i, raidPlunderLimit(state, h.denarii));
   if (plunder > 0) {
     h.denarii -= plunder;
     H.spoils += plunder;
@@ -727,8 +735,9 @@ function raidTarget(state: GameState): { target: Ludus; bounty: boolean } | null
     H.bountyTarget = undefined;
     if (b) return { target: b, bounty: true };
   }
-  const gap = state.world.ascension > 0 ? 4 : state.world.difficulty.hard ? 5 : 6;
-  if (!me.defeated && week - H.lastRaidOnPlayer >= gap && rand(3) === 0) return { target: me, bounty: false };
+  const b = balance(state);
+  const gap = Math.max(state.world.ascension > 0 ? 4 : 0, b.raidGap);
+  if (!me.defeated && week >= b.raidGrace && week - H.lastRaidOnPlayer >= gap && rand(3) === 0) return { target: me, bounty: false };
   const pool = activeRivals(state).filter((r) => (r.ai?.visible ?? true) && !r.ai?.pact);
   if (!pool.length) return null;
   return { target: pick(pool), bounty: false };
@@ -818,7 +827,9 @@ function playerRaidDecision(state: GameState): Decision {
       {
         label: 'Hide behind the palisade',
         desc: `−5 influence. They plunder about ${n.hide} denarii${n.short ? ', and with so few wardens they will take keepers and maybe a dino too' : ''}.` +
-          (n.short && !me.creatures.some((c) => !c.away && canFightAge(c)) ? ' With no dino at home to stand in their way, the ludus will fall.' : ''),
+          (n.short && !me.creatures.some((c) => !c.away && canFightAge(c))
+            ? (balance(state).raidEmptyHouseFalls || keeperTotal(me) === 0 ? ' With no dino at home to stand in their way, the ludus will fall.' : ' With no dino at home to stand in their way, they will burn a building.')
+            : ''),
       },
     ],
     data: { army: a, danger: n.danger, cost: n.cost, hide: n.hide, short: n.short, extra },
@@ -861,16 +872,16 @@ function hideFromRaid(state: GameState, a: number, n: { hide: number; short: boo
   const H = state.world.horde;
   const lines: string[] = ['You barred the gates and hid behind the palisade (−5 influence).'];
   addInfluence(state, me, -5);
-  const plunder = Math.min(n.hide, Math.max(0, me.denarii));
+  const plunder = Math.min(n.hide, raidPlunderLimit(state, me.denarii));
   me.denarii -= plunder;
   H.spoils += plunder;
   if (plunder) lines.push(`The Horde plundered ${plunder} denarii from the outbuildings.`);
   if (n.short) {
     const want = Math.max(1, Math.trunc((a - n.S) / 3));
-    const lost = Math.min(want, keeperTotal(me));
+    const lost = Math.min(want, raidKeeperLimit(state, keeperTotal(me)));
     if (lost > 0) {
       loseKeepers(state, me, lost);
-      H.ferals += lost;
+      H.ferals += feralRecruits(state, lost);
       lines.push(`${lost} keepers were dragged off to join the Horde.`);
     }
     if ((me.buildings.palisade ?? 0) > 0 && coin()) {
@@ -879,11 +890,16 @@ function hideFromRaid(state: GameState, a: number, n: { hide: number; short: boo
     }
     const present = me.creatures.filter((c) => !c.away && canFightAge(c));
     if (!present.length) {
-      me.defeated = 'horde';
-      lines.push('There was nobody left to stop them.');
+      if (balance(state).raidEmptyHouseFalls || keeperTotal(me) === 0) {
+        me.defeated = 'horde';
+        lines.push('There was nobody left to stop them.');
+      } else {
+        const b = loseRandomBuilding(me);
+        lines.push(`With no dino at home to stop them they ran riot${b ? ` and burned the ${(BUILDINGS as Record<string, { name?: string } | undefined>)[b]?.name ?? b}` : ''}.`);
+      }
     } else if (coin()) {
       const victim = pick(present);
-      if (state.world.difficulty.hard) {
+      if (state.world.difficulty.hard && balance(state).raidStealsCreatures) {
         joinHorde(state, victim, me);
         lines.push(`They broke into the pens and ${victim.name} ran off with them.`);
       } else {

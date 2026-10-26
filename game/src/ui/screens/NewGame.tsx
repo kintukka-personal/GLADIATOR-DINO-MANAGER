@@ -37,6 +37,7 @@ export function NewGameScreen() {
   const [sandbox, setSandbox] = useState(false);
   const [raidsOff, setRaidsOff] = useState(false);
   const [breakoutsOff, setBreakoutsOff] = useState(false);
+  const [classic, setClassic] = useState(false);
   const [asc, setAsc] = useState(0);
   const [rein, setRein] = useState<'young' | 'old'>('young');
   const [slot, setSlot] = useState<number>(pref >= 1 && pref <= SLOTS ? pref : (slots.findIndex((s) => !s) + 1 || 1));
@@ -52,7 +53,7 @@ export function NewGameScreen() {
   const create = () => {
     const o: NewGameOptions = {
       lanista: lanista.trim(), ludusName: ludusName.trim() || undefined, female, heritage, hard: hard || nightmare, nightmare, sandbox,
-      raidsDisabled: raidsOff, betrayalsDisabled: breakoutsOff, ascension: ascVal, slot, reincarnation: ascVal > 0 && champ ? rein : undefined,
+      raidsDisabled: raidsOff, betrayalsDisabled: breakoutsOff, classic: classic || undefined, ascension: ascVal, slot, reincarnation: ascVal > 0 && champ ? rein : undefined,
     };
     try {
       const g = createNewGame(o, m);
@@ -133,12 +134,14 @@ export function NewGameScreen() {
 
         {step === 2 && (
           <div className="stack">
-            <Panel label="Difficulty" title={nightmare ? 'Nightmare' : hard ? 'Hard' : 'Normal'}>
-              <Toggle id="ng-hard" checked={hard || nightmare} disabled={nightmare} onChange={setHard} label="Hard" desc="Richer rivals, a faster Horde, 800 starting denarii." />
+            <Panel label="Difficulty" title={`${nightmare ? 'Nightmare' : hard ? 'Hard' : 'Normal'}${classic ? ' · Classic' : ''}`}>
+              <p className="small muted">Normal forgives a careful newcomer: raids take only part of what you own and the Horde grows slowly. Each step up bites harder.</p>
+              <Toggle id="ng-hard" checked={hard || nightmare} disabled={nightmare} onChange={setHard} label="Hard" desc="Richer rivals, a faster Horde, heavier raids, 800 starting denarii." />
               <Toggle id="ng-nightmare" checked={nightmare} disabled={!hasNightmare} onChange={setNightmare} label={<span className="row gap-1">{!hasNightmare && <Icon name="lock" size={14} />}Nightmare</span>} desc={hasNightmare ? 'Crassus is in town. Good luck.' : 'Needs the Nightmare Mode upgrade (earn Divine on Hard).'} />
               <Toggle id="ng-sandbox" checked={sandbox} onChange={setSandbox} label="Sandbox" desc="+5000 denarii and +200 influence; no achievements or highscores." />
               <Toggle id="ng-raids" checked={raidsOff || sandbox} disabled={sandbox} onChange={setRaidsOff} label="No raids" desc="Rivals and the Horde never raid your ludus." />
               <Toggle id="ng-breakouts" checked={breakoutsOff || sandbox} disabled={sandbox} onChange={setBreakoutsOff} label="No breakouts" desc="Dinos never escape, however wild." />
+              <Toggle id="ng-classic" checked={classic} onChange={setClassic} label="Classic rules" desc="Gladiator Manager's original, unforgiving numbers: every carried-off keeper joins the Horde, raids can strip the ludus bare, and veterans cost full upkeep." />
             </Panel>
             <Panel label="Ascension" title={ascVal ? `Ascension ${ascVal}` : 'No ascension'}>
               {maxAsc === 0 ? (

@@ -69,10 +69,22 @@ export function CodexScreen() {
               <li><b>Buy a dino.</b> The week-1 market always has Tetraites, Carpophorus and Flamma, plus the dire wolf pup Aello.</li>
               <li><b>Teach it a technique</b> on its Techniques tab and <b>buy harness</b> (a weapon first) in the market.</li>
               <li><b>Register for a tournament</b> in the Arena and press <b>Advance</b>. One turn is one week.</li>
-              <li><b>Hire keepers</b> and put them to work in Finance: miners for coin, showmen for influence, wardens for security, spies for intel.</li>
+              <li><b>Hire keepers</b> and put them to work in the Estate: miners for coin, showmen for influence, wardens for security, spies for intel.</li>
               <li><b>Build</b> in the Estate: one construction a week. A Breeding Pen, Hatchery and Nursery open the breeding game.</li>
               <li>Keep tameness up. Unhappy dinos break out and join Spartacus&rsquo; Wild Horde.</li>
             </ol>
+          </Plaque>
+        )}
+        {page === 'quickstart' && (
+          <Plaque label="Codex" title="Staying alive">
+            <ul>
+              <li><b>Keepers before dinos.</b> A miner earns about 8 denarii a week after upkeep and pays for himself in twelve weeks. Every extra dino costs upkeep, more as it levels.</li>
+              <li><b>Keep a reserve.</b> Two weeks in the red and the creditors start seizing keepers; with none left they close the ludus. The hub warns you when the strongbox will run dry within eight weeks.</li>
+              <li><b>Enter every tournament.</b> Entry is free and the events you do not watch resolve on &ldquo;avoid injury&rdquo;.</li>
+              <li><b>Watch the hills.</b> A raid breaks in when the Horde&rsquo;s band outnumbers your wardens plus half your roster. Wardens and a Palisade keep your keepers at home; two spies tell you the numbers.</li>
+              <li><b>Never leave the pens empty.</b> Keep at least two dinos at home, and sell the crippled ones: they cost full upkeep and lose most fights.</li>
+              <li><b>Take the fight to the Horde.</b> At 100 influence the Senate funds expeditions that can crush it.</li>
+            </ul>
           </Plaque>
         )}
         {page === 'species' && (

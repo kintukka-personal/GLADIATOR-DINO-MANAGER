@@ -1039,6 +1039,10 @@ export interface HallOfFameEntry {
 export interface Settings {
   sound: boolean;
   music: boolean;
+  /** 0–1; absent in metas saved before the music existed (loadMeta's migration fills it and turns music on) */
+  musicVolume?: number;
+  /** sound-effects volume 0–1 (1 = the level the effects were tuned at) */
+  sfxVolume?: number;
   battleSpeed: 1 | 2 | 4;
   tooltips: boolean;
   reduceMotion: boolean;
@@ -1071,6 +1075,8 @@ export interface Difficulty {
   sandbox: boolean;
   raidsDisabled: boolean;
   betrayalsDisabled: boolean;
+  /** Gladiator Manager's original, unsoftened balance (balance.ts) */
+  classic?: boolean;
 }
 
 export interface PlayerData {

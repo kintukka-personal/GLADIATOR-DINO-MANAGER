@@ -4,7 +4,8 @@
 // (instruction, technique order, harness slot, a bribe) through the battle viewer → results chain → keep playing:
 // register every week, answer decisions, stories, schemes and adventures, try one intrigue action and one
 // influence unlock. Screenshots of each new screen go to $SHOT_DIR (default <tmp>/jl-e2e). Exits 1 on any
-// console error or page error.
+// console error or page error. Music: records the moods heard on the way (window.__jlMusic.state()) and checks
+// that Settings → Music stops and restarts the scheduler.
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -33,7 +34,16 @@ page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 const log = (...a) => console.log('·', ...a);
 const wait = (ms) => page.waitForTimeout(ms);
 const shots = new Set();
+const moods = new Set();
+async function music() {
+  return page.evaluate(() => window.__jlMusic?.state?.() ?? null).catch(() => null);
+}
+async function noteMusic() {
+  const m = await music();
+  if (m?.playing) moods.add(m.playing);
+}
 async function shot(name, { force = false, full = false } = {}) {
+  await noteMusic();
   if (shots.has(name) && !force) return;
   shots.add(name);
   await page.screenshot({ path: join(OUT, `e2e-${name}.${tag}.png`), fullPage: full });
@@ -63,6 +73,7 @@ async function money() {
 /** Close the battle viewer if it is open (skip to the end, then continue). */
 async function closeBattle(name) {
   if (!(await visible('.battle-layer'))) return false;
+  await noteMusic();
   if (name) { await wait(1400); await shot(name); }
   if (await visible('#battle-skip')) await click('#battle-skip', 500);
   if (name) await shot(`${name}-end`);
@@ -322,6 +333,33 @@ async function tour() {
   if (await visible(asc)) { await click(asc, 400); await shot('ascension'); await overflow('ascension'); }
   await nav('settings');
   await shot('settings');
+  await checkMusicToggle();
+}
+
+/** Settings → Music off stops the scheduler; on starts it again. */
+async function checkMusicToggle() {
+  const before = await music();
+  if (!before) { errors.push('music: no window.__jlMusic debug hook'); return; }
+  if (!before.enabled || !before.running) { errors.push(`music: not running on the settings screen (${JSON.stringify(before)})`); return; }
+  await click('label[for="settings-music"]', 600);
+  const off = await music();
+  const n0 = off?.events ?? 0;
+  await wait(1200);
+  const off2 = await music();
+  if (off?.enabled || off?.running || off?.playing || (off2?.events ?? 0) !== n0) errors.push(`music: still scheduling after Music was turned off (${JSON.stringify(off2)})`);
+  if (!(await page.locator('#settings-music-volume').isDisabled())) errors.push('music: the volume slider should be disabled while Music is off');
+  await click('label[for="settings-music"]', 600);
+  await wait(800);
+  const on = await music();
+  if (!on?.running || on.playing !== 'ludus' || on.events <= n0) { errors.push(`music: did not restart (${JSON.stringify(on)})`); return; }
+  log(`music: off and on again (${on.events} notes scheduled, context ${on.context})`);
+  const slider = page.locator('#settings-music-volume');
+  await slider.focus();
+  for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowLeft');
+  await wait(200);
+  const vol = await music();
+  if (Math.abs((vol?.volume ?? 0) - (on.volume - 0.2)) > 0.001) errors.push(`music: volume slider not applied (${on.volume} → ${vol?.volume})`);
+  for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight');
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -333,6 +371,7 @@ try {
   await page.evaluate(() => { try { localStorage.clear(); } catch { /* ignore */ } });
   await page.goto(BASE, { waitUntil: 'networkidle' });
   await click('#menu-new', 400);
+  await noteMusic();
   await page.fill('#ng-lanista', 'Quintus');
   await click('#ng-next', 300);
   await click('#ng-next2', 300);
@@ -382,11 +421,14 @@ try {
   await shot('hub-end');
   log(`intrigue ${intrigueDone ? 'done' : 'not tried'}, influence ${influenceDone ? 'unlocked' : 'not affordable'}`);
 } catch (e) {
-  errors.push(`script: ${e.message.split('\n')[0]}`);
+  errors.push(`script: ${e.message.split('\n').slice(0, 4).join('\n    ')}`);
   await page.screenshot({ path: join(OUT, `e2e-failure.${tag}.png`) }).catch(() => undefined);
 }
 
+const finalMusic = await music();
 await browser.close();
+console.log(`music moods heard: ${[...moods].join(', ') || 'none'}${finalMusic ? ` · ${finalMusic.events} notes scheduled` : ''}`);
+for (const m of ['title', 'ludus', 'arena', 'battle']) if (!moods.has(m)) errors.push(`music: never heard the ${m} mood`);
 if (badToasts.size) console.log('error toasts seen:', [...badToasts].join(' | '));
 console.log(`${shots.size} screenshots in ${OUT}`);
 if (errors.length) {

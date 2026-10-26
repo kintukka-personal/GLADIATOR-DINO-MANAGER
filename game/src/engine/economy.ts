@@ -8,6 +8,7 @@ import { chance } from './rng';
 import { hasUpgrade, report, message, isPlayerHouse } from './util';
 import { isKid } from './creature';
 import { buildingTotals } from './buildings';
+import { balance } from './balance';
 import { hasOpp, publicSessionsIncome } from './influence';
 import { joinHorde } from './horde';
 import { objectiveEvent } from './objectives';
@@ -155,30 +156,31 @@ export function withinFacilities(h: Ludus, c: Creature): boolean {
   return idx >= 0 && idx < buildingTotals(h).facilities;
 }
 
-/** GM level surcharge on creature upkeep: (L−2)×3 above level 2 (kids pay L−2), +(L−6)×5 above level 6. */
-export function levelSurcharge(c: Creature): number {
+/** GM level surcharge on creature upkeep: (L−2)×3 above level 2 (kids pay L−2), +(L−6)×5 above level 6,
+ *  times the difficulty's `upkeepSurchargeScale` (balance.ts). */
+export function levelSurcharge(c: Creature, scale = 1): number {
   const L = c.level;
   let s = 0;
   if (L > 2) s += isKid(c) ? L - 2 : (L - 2) * 3;
   if (L > 6) s += (L - 6) * 5;
-  return s;
+  return Math.round(s * scale);
 }
 
 /** Weekly upkeep of one creature given whether it fits the facilities. Babies cost 1. */
-export function creatureUpkeepOf(c: Creature, withinCapacity: boolean): number {
+export function creatureUpkeepOf(c: Creature, withinCapacity: boolean, scale = 1): number {
   if (c.away?.kind === 'loan') return 0;
   if (c.maturity < 0.1) return 1;
-  return (withinCapacity ? 5 : 10) + levelSurcharge(c);
+  return (withinCapacity ? 5 : 10) + levelSurcharge(c, scale);
 }
 
-export function creatureUpkeep(h: Ludus): number {
+export function creatureUpkeep(h: Ludus, scale = 1): number {
   const cap = buildingTotals(h).facilities;
   let used = 0;
   let total = 0;
   for (const c of h.creatures) {
     if (c.away?.kind === 'loan') continue;
     if (c.maturity < 0.1) { total += 1; continue; }
-    total += creatureUpkeepOf(c, used < cap);
+    total += creatureUpkeepOf(c, used < cap, scale);
     used++;
   }
   return total;
@@ -218,7 +220,7 @@ export function weeklyExpenses(state: GameState, h: Ludus): Ledger {
   const estate = buildingTotals(h).denarii;
   return ledger([
     { label: 'Keeper upkeep', amount: -keeperUpkeep(h) },
-    { label: 'Dino upkeep', amount: -creatureUpkeep(h) },
+    { label: 'Dino upkeep', amount: -creatureUpkeep(h, balance(state).upkeepSurchargeScale) },
     { label: 'Paid trainers', amount: -trainers },
     { label: 'Standing costs', amount: Math.min(0, h.projected) },
     { label: 'Estate upkeep', amount: Math.min(0, estate) },
@@ -260,7 +262,7 @@ export function economyWeek(state: GameState, h: Ludus): void {
     for (const l of inc.lines) report(state, 'income', l.label, l.amount);
     for (const l of exp.lines) report(state, 'expense', l.label, l.amount);
   }
-  debtWeek(state, h, keeperUpkeep(h) + creatureUpkeep(h));
+  debtWeek(state, h, keeperUpkeep(h) + creatureUpkeep(h, balance(state).upkeepSurchargeScale));
 }
 
 function debtNote(state: GameState, h: Ludus, kind: WeekReportEntry['kind'], text: string, amount?: number): void {
